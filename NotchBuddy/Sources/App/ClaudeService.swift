@@ -4,7 +4,7 @@ import Security
 // MARK: - Keychain helpers
 
 enum Keychain {
-    static let service = "fr.louisraille.NotchBuddy"
+    static let service = "au.com.purplegiraffe.Giraffy"
 
     static func save(key: String, value: String) {
         guard let data = value.data(using: .utf8) else { return }
@@ -225,9 +225,9 @@ final class ClaudeService {
     /// neutral otherwise — same wording as the Windows build.
     private nonisolated static func makeSystemPrompt() -> String {
         let opening = if let firstName = resolveUserFirstName() {
-            "You are Mochi, \(firstName)'s personal AI assistant embedded in the notch of their Mac."
+            "You are Giraffy, \(firstName)'s personal AI assistant embedded in the notch of their Mac."
         } else {
-            "You are Mochi, a personal AI assistant embedded in the notch of the user's Mac."
+            "You are Giraffy, a personal AI assistant embedded in the notch of the user's Mac."
         }
         return """
         \(opening) \

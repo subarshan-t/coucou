@@ -1,17 +1,18 @@
 import Foundation
 
-// Coucou's own releases on GitHub, for "New version" in the notch (GitHub build only; the App
-// Store updates its own build). Pure Foundation so tests/MacUpdateTests.swift checks the rules:
-// which release is the Mac's, whether it is newer, what to say about it. The Mac's tags are
-// `vX.Y.Z` with a `Coucou.zip`; Windows, Linux and Android have their own prefixed tags.
+// Giraffy's own releases on GitHub, for "New version" in the notch. Pure Foundation so
+// tests/MacUpdateTests.swift checks the rules: which release is the Mac's, whether it is newer,
+// what to say about it. Tags are `vX.Y.Z` with a `Giraffy.zip`.
+// Off for now (MacUpdater.isEnabled): PG has no release feed yet. The placeholders below must be
+// replaced with PG's GitHub repo and Developer ID team before the updater is turned on.
 
 enum MacUpdate {
-    static let owner = "Louis-CFM"
-    static let repo = "coucou"
+    static let owner = "TODO_PG_GITHUB_OWNER"
+    static let repo = "giraffy"
     static let releasesURL = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/releases?per_page=20")!
-    /// What the downloaded app must be signed as: Coucou's bundle id, Louis's Developer ID team.
-    static let bundleId = "fr.louisraille.NotchBuddy"
-    static let teamId = "256AUJ9555"
+    /// What the downloaded app must be signed as: Giraffy's bundle id, PG's Developer ID team.
+    static let bundleId = "au.com.purplegiraffe.Giraffy"
+    static let teamId = "TODO_PG_TEAM_ID"
     static var codeRequirement: String {
         "anchor apple generic and identifier \"\(bundleId)\" and certificate leaf[subject.OU] = \"\(teamId)\""
     }
@@ -33,7 +34,7 @@ enum MacUpdate {
             guard r["draft"] as? Bool != true, r["prerelease"] as? Bool != true,
                   let tag = r["tag_name"] as? String, let version = macVersion(tag),
                   let assets = r["assets"] as? [[String: Any]],
-                  let zip = assets.first(where: { $0["name"] as? String == "Coucou.zip" }),
+                  let zip = assets.first(where: { $0["name"] as? String == "Giraffy.zip" }),
                   let s = zip["browser_download_url"] as? String, let url = URL(string: s),
                   let page = (r["html_url"] as? String).flatMap(URL.init(string:)) else { return nil }
             return Release(version: version, tag: tag, zipURL: url, size: (zip["size"] as? Int) ?? 0,

@@ -14,7 +14,7 @@ final class HookServer: @unchecked Sendable {
     // Support directory paths
     static var supportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("NotchBuddy")
+            .appendingPathComponent("Giraffy")
     }
     static var socketPath: String {
         #if APPSTORE
@@ -123,7 +123,7 @@ final class HookServer: @unchecked Sendable {
     private func removeApproval(id: UUID, answer json: String? = nil, note: String? = nil) {
         guard let entry = approvals.remove(id: id) else { return }
         let age = Int(Date().timeIntervalSince(entry.received))
-        nbLog("Approval \(entry.tool) closed after \(age) s: \(json.map { _ in "answered from Coucou" } ?? note ?? "dropped")")
+        nbLog("Approval \(entry.tool) closed after \(age) s: \(json.map { _ in "answered from Giraffy" } ?? note ?? "dropped")")
         let source = approvalSources.removeValue(forKey: id)
         if let json {
             let fd = entry.fd
@@ -1403,7 +1403,7 @@ final class HookServer: @unchecked Sendable {
                 if let hookList = matcher["hooks"] as? [[String: Any]] {
                     for hook in hookList {
                         if let cmd = hook["command"] as? String,
-                           cmd.contains("NotchBuddy") || cmd.contains("coucou") {
+                           cmd.contains("Giraffy") || cmd.contains("giraffy") {
                             hasCoucouHooks = true
                             if let timeout = hook["timeout"] as? Int, timeout < 120 { return true }
                         }
@@ -1419,7 +1419,7 @@ final class HookServer: @unchecked Sendable {
                 (m["matcher"] as? String) == "AskUserQuestion"
                 && (m["hooks"] as? [[String: Any]])?.contains {
                     let cmd = $0["command"] as? String ?? ""
-                    return cmd.contains("NotchBuddy") || cmd.contains("coucou")
+                    return cmd.contains("Giraffy") || cmd.contains("giraffy")
                 } ?? false
             }
             if !hasAskEntry { return true }
@@ -1478,7 +1478,7 @@ final class HookServer: @unchecked Sendable {
         var hooks = try ClaudeSettingsFile.hooks(in: settings, name: "settings.json")
         for (event, timeout) in events {
             var existing = try ClaudeSettingsFile.hookGroups(in: hooks, event: event, name: "settings.json")
-            existing.removeAll { ($0["hooks"] as? [[String: Any]])?.contains { ($0["command"] as? String)?.contains("NotchBuddy") == true || ($0["command"] as? String)?.contains("coucou") == true } ?? false }
+            existing.removeAll { ($0["hooks"] as? [[String: Any]])?.contains { ($0["command"] as? String)?.contains("Giraffy") == true || ($0["command"] as? String)?.contains("giraffy") == true } ?? false }
             existing.append(["hooks": [["type": "command", "command": quotedCmd, "timeout": timeout]]])
             hooks[event] = existing
         }
@@ -1505,8 +1505,8 @@ final class HookServer: @unchecked Sendable {
             if var matchers = hooks[key] as? [[String: Any]] {
                 matchers.removeAll { matcher in
                     (matcher["hooks"] as? [[String: Any]])?.contains {
-                        ($0["command"] as? String)?.contains("NotchBuddy") == true ||
-                        ($0["command"] as? String)?.contains("coucou") == true
+                        ($0["command"] as? String)?.contains("Giraffy") == true ||
+                        ($0["command"] as? String)?.contains("giraffy") == true
                     } ?? false
                 }
                 if matchers.isEmpty { hooks.removeValue(forKey: key) }
@@ -1656,8 +1656,8 @@ final class HookServer: @unchecked Sendable {
     func installAndWriteClaudeHooksAppStore(claudeURL: URL) throws {
         let (data, original) = try buildHooksData(claudeURL: claudeURL)
 
-        // Write nb-hook (shell wrapper) + nb-hook.py (Python relay) into ~/.claude/coucou/
-        let coucouDir = claudeURL.appendingPathComponent("coucou")
+        // Write nb-hook (shell wrapper) + nb-hook.py (Python relay) into ~/.claude/giraffy/
+        let coucouDir = claudeURL.appendingPathComponent("giraffy")
         try FileManager.default.createDirectory(at: coucouDir, withIntermediateDirectories: true)
         let wrapperURL = coucouDir.appendingPathComponent("nb-hook")
         try nbHookShellWrapper.write(to: wrapperURL, atomically: true, encoding: .utf8)
@@ -1681,8 +1681,8 @@ final class HookServer: @unchecked Sendable {
             if var matchers = hooks[key] as? [[String: Any]] {
                 matchers.removeAll { matcher in
                     (matcher["hooks"] as? [[String: Any]])?.contains {
-                        ($0["command"] as? String)?.contains("coucou") == true ||
-                        ($0["command"] as? String)?.contains("NotchBuddy") == true
+                        ($0["command"] as? String)?.contains("giraffy") == true ||
+                        ($0["command"] as? String)?.contains("Giraffy") == true
                     } ?? false
                 }
                 if matchers.isEmpty { hooks.removeValue(forKey: key) }
@@ -1701,7 +1701,7 @@ final class HookServer: @unchecked Sendable {
         let snapshot = try ClaudeSettingsFile.read(at: settingsURL)
         var settings = snapshot.object
         // Derive hook path from the panel-selected claudeURL (real ~/.claude, not container)
-        let hookPath = claudeURL.appendingPathComponent("coucou/nb-hook").path
+        let hookPath = claudeURL.appendingPathComponent("giraffy/nb-hook").path
         let quotedCmd = "/bin/sh \"\(hookPath.replacingOccurrences(of: "\"", with: "\\\""))\""
         let events: [(String, Int)] = [
             ("SessionStart", 10), ("SessionEnd", 10),
@@ -1717,8 +1717,8 @@ final class HookServer: @unchecked Sendable {
         for (event, timeout) in events {
             var existing = try ClaudeSettingsFile.hookGroups(in: hooks, event: event, name: "settings.json")
             existing.removeAll { ($0["hooks"] as? [[String: Any]])?.contains {
-                ($0["command"] as? String)?.contains("coucou") == true ||
-                ($0["command"] as? String)?.contains("NotchBuddy") == true
+                ($0["command"] as? String)?.contains("giraffy") == true ||
+                ($0["command"] as? String)?.contains("Giraffy") == true
             } ?? false }
             existing.append(["hooks": [["type": "command", "command": quotedCmd, "timeout": timeout]]])
             hooks[event] = existing
@@ -1835,7 +1835,7 @@ final class HookServer: @unchecked Sendable {
                                                      label: "~/.gemini/settings.json")
         if let raw = settings["hooks"], !(raw is [String: Any]) {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "~/.gemini/settings.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "~/.gemini/settings.json: \"hooks\" has an unexpected type — Giraffy has not touched it."
             ])
         }
         let base = hookBase()
@@ -1852,7 +1852,7 @@ final class HookServer: @unchecked Sendable {
         for (geminiEvent, normalizedEvent, timeout) in events {
             if let raw = hooks[geminiEvent], !(raw is [[String: Any]]) {
                 throw NSError(domain: "Coucou", code: 2, userInfo: [
-                    NSLocalizedDescriptionKey: "~/.gemini/settings.json: \"hooks\"[\"\(geminiEvent)\"] has an unexpected type — Coucou has not touched it."
+                    NSLocalizedDescriptionKey: "~/.gemini/settings.json: \"hooks\"[\"\(geminiEvent)\"] has an unexpected type — Giraffy has not touched it."
                 ])
             }
             var groups = hooks[geminiEvent] as? [[String: Any]] ?? []
@@ -1876,7 +1876,7 @@ final class HookServer: @unchecked Sendable {
                                                      label: "~/.gemini/settings.json")
         if let raw = settings["hooks"], !(raw is [String: Any]) {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "~/.gemini/settings.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "~/.gemini/settings.json: \"hooks\" has an unexpected type — Giraffy has not touched it."
             ])
         }
         if var hooks = settings["hooks"] as? [String: Any] {
@@ -1974,12 +1974,12 @@ final class HookServer: @unchecked Sendable {
         do { data = try Data(contentsOf: url) }
         catch {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "\(label) cannot be read — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "\(label) cannot be read — Giraffy has not touched it."
             ])
         }
         guard let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "\(label) is not valid JSON — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "\(label) is not valid JSON — Giraffy has not touched it."
             ])
         }
         return obj
@@ -2085,7 +2085,7 @@ final class HookServer: @unchecked Sendable {
         var root = try Self.strictReadJSONObject(at: Self.codexHooksURL, label: "~/.codex/hooks.json")
         if let raw = root["hooks"], !(raw is [String: Any]) {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "~/.codex/hooks.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "~/.codex/hooks.json: \"hooks\" has an unexpected type — Giraffy has not touched it."
             ])
         }
         let base = hookBase()
@@ -2095,7 +2095,7 @@ final class HookServer: @unchecked Sendable {
             ("SessionStart",    10,  nil),
             ("UserPromptSubmit", 10, nil),
             ("PreToolUse",      10,  nil),
-            ("PermissionRequest", 120, "Waiting for your answer in the notch (Coucou)"),
+            ("PermissionRequest", 120, "Waiting for your answer in the notch (Giraffy)"),
             ("PostToolUse",     10,  nil),
             ("Stop",            10,  nil),
             ("SubagentStart",   10,  nil),
@@ -2107,7 +2107,7 @@ final class HookServer: @unchecked Sendable {
         for (event, timeout, statusMsg) in events {
             if let raw = hooks[event], !(raw is [[String: Any]]) {
                 throw NSError(domain: "Coucou", code: 2, userInfo: [
-                    NSLocalizedDescriptionKey: "~/.codex/hooks.json: \"hooks\"[\"\(event)\"] has an unexpected type — Coucou has not touched it."
+                    NSLocalizedDescriptionKey: "~/.codex/hooks.json: \"hooks\"[\"\(event)\"] has an unexpected type — Giraffy has not touched it."
                 ])
             }
             var groups = hooks[event] as? [[String: Any]] ?? []
@@ -2131,7 +2131,7 @@ final class HookServer: @unchecked Sendable {
         var root = try Self.strictReadJSONObject(at: Self.codexHooksURL, label: "~/.codex/hooks.json")
         if let raw = root["hooks"], !(raw is [String: Any]) {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "~/.codex/hooks.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "~/.codex/hooks.json: \"hooks\" has an unexpected type — Giraffy has not touched it."
             ])
         }
         if var hooks = root["hooks"] as? [String: Any] {
@@ -2151,10 +2151,10 @@ final class HookServer: @unchecked Sendable {
 
     static var copilotHooksURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".copilot/hooks/coucou.json")
+            .appendingPathComponent(".copilot/hooks/giraffy.json")
     }
 
-    /// True when ~/.copilot/hooks/coucou.json already routes Copilot events to Coucou's nb-hook.
+    /// True when ~/.copilot/hooks/giraffy.json already routes Copilot events to Coucou's nb-hook.
     static func copilotHooksInstalled() -> Bool {
         guard let data = try? Data(contentsOf: copilotHooksURL),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
@@ -2198,11 +2198,11 @@ final class HookServer: @unchecked Sendable {
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
             throw NSError(domain: "Coucou", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "~/.copilot/hooks/coucou.json changed since preview. Refresh and try again."
+                NSLocalizedDescriptionKey: "~/.copilot/hooks/giraffy.json changed since preview. Refresh and try again."
             ])
         }
         if let data = _pendingCopilotData {
-            try writeJSONFile(data, to: url, suffix: "coucou.json")
+            try writeJSONFile(data, to: url, suffix: "giraffy.json")
         } else {
             // Uninstall: delete the file entirely
             try FileManager.default.removeItem(at: url)
@@ -2213,10 +2213,10 @@ final class HookServer: @unchecked Sendable {
 
     private func buildCopilotHooksData() throws -> Data {
         var root = try Self.strictReadJSONObject(at: Self.copilotHooksURL,
-                                                  label: "~/.copilot/hooks/coucou.json")
+                                                  label: "~/.copilot/hooks/giraffy.json")
         if let raw = root["hooks"], !(raw is [String: Any]) {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "~/.copilot/hooks/coucou.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "~/.copilot/hooks/giraffy.json: \"hooks\" has an unexpected type — Giraffy has not touched it."
             ])
         }
         let base = hookBase()
@@ -2237,7 +2237,7 @@ final class HookServer: @unchecked Sendable {
         for (event, timeout) in events {
             if let raw = hooks[event], !(raw is [[String: Any]]) {
                 throw NSError(domain: "Coucou", code: 2, userInfo: [
-                    NSLocalizedDescriptionKey: "~/.copilot/hooks/coucou.json: \"hooks\"[\"\(event)\"] has an unexpected type — Coucou has not touched it."
+                    NSLocalizedDescriptionKey: "~/.copilot/hooks/giraffy.json: \"hooks\"[\"\(event)\"] has an unexpected type — Giraffy has not touched it."
                 ])
             }
             var entries = hooks[event] as? [[String: Any]] ?? []
@@ -2253,7 +2253,7 @@ final class HookServer: @unchecked Sendable {
 
     private func withoutCopilotHooks() throws -> Data {
         var root = try Self.strictReadJSONObject(at: Self.copilotHooksURL,
-                                                  label: "~/.copilot/hooks/coucou.json")
+                                                  label: "~/.copilot/hooks/giraffy.json")
         if var hooks = root["hooks"] as? [String: Any] {
             for key in hooks.keys {
                 if var entries = hooks[key] as? [[String: Any]] {
@@ -2332,7 +2332,7 @@ final class HookServer: @unchecked Sendable {
                                                       label: "~/.config/muse/settings.json")
         if let raw = settings["hooks"], !(raw is [String: Any]) {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "~/.config/muse/settings.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "~/.config/muse/settings.json: \"hooks\" has an unexpected type — Giraffy has not touched it."
             ])
         }
         let base = hookBase()
@@ -2351,7 +2351,7 @@ final class HookServer: @unchecked Sendable {
         for (event, timeoutSec) in events {
             if let raw = hooks[event], !(raw is [[String: Any]]) {
                 throw NSError(domain: "Coucou", code: 2, userInfo: [
-                    NSLocalizedDescriptionKey: "~/.config/muse/settings.json: \"hooks\"[\"\(event)\"] has an unexpected type — Coucou has not touched it."
+                    NSLocalizedDescriptionKey: "~/.config/muse/settings.json: \"hooks\"[\"\(event)\"] has an unexpected type — Giraffy has not touched it."
                 ])
             }
             var groups = hooks[event] as? [[String: Any]] ?? []
@@ -2375,7 +2375,7 @@ final class HookServer: @unchecked Sendable {
                                                       label: "~/.config/muse/settings.json")
         if let raw = settings["hooks"], !(raw is [String: Any]) {
             throw NSError(domain: "Coucou", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "~/.config/muse/settings.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+                NSLocalizedDescriptionKey: "~/.config/muse/settings.json: \"hooks\" has an unexpected type — Giraffy has not touched it."
             ])
         }
         if var hooks = settings["hooks"] as? [String: Any] {
@@ -2398,7 +2398,7 @@ final class HookServer: @unchecked Sendable {
 
     static var openCodePluginURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/opencode/plugins/coucou.js")
+            .appendingPathComponent(".config/opencode/plugins/giraffy.js")
     }
 
     static func openCodePluginInstalled() -> Bool {
@@ -2411,7 +2411,7 @@ final class HookServer: @unchecked Sendable {
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
         return """
-// Coucou hook plugin for OpenCode — generated by Coucou.app
+// Giraffy hook plugin for OpenCode — generated by Giraffy.app
 // Forwards every event to the Coucou notch (fire-and-forget, never blocks).
 import { spawn } from 'node:child_process';
 
@@ -2493,7 +2493,7 @@ export const CoucouPlugin = async (_ctx) => ({
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
             throw NSError(domain: "Coucou", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "~/.config/opencode/plugins/coucou.js changed since preview. Refresh and try again."
+                NSLocalizedDescriptionKey: "~/.config/opencode/plugins/giraffy.js changed since preview. Refresh and try again."
             ])
         }
         guard let content = _pendingOpenCodeContent else {
@@ -2506,7 +2506,7 @@ export const CoucouPlugin = async (_ctx) => ({
             fmt.locale = Locale(identifier: "en_US_POSIX")
             fmt.dateFormat = "yyyyMMdd-HHmmss"
             let backupURL = url.deletingLastPathComponent()
-                .appendingPathComponent("coucou.js.bak-\(fmt.string(from: Date()))")
+                .appendingPathComponent("giraffy.js.bak-\(fmt.string(from: Date()))")
             try fm.copyItem(at: url, to: backupURL)
         }
         try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -2519,9 +2519,9 @@ export const CoucouPlugin = async (_ctx) => ({
         let url = Self.openCodePluginURL
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        guard content.contains("generated by Coucou") else {
+        guard content.contains("generated by Giraffy") else {
             throw NSError(domain: "Coucou", code: 3, userInfo: [
-                NSLocalizedDescriptionKey: "~/.config/opencode/plugins/coucou.js was not generated by Coucou — not deleting it."
+                NSLocalizedDescriptionKey: "~/.config/opencode/plugins/giraffy.js was not generated by Giraffy — not deleting it."
             ])
         }
         try FileManager.default.removeItem(at: url)
@@ -2534,7 +2534,7 @@ export const CoucouPlugin = async (_ctx) => ({
 
     static var ampPluginURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/amp/plugins/coucou.ts")
+            .appendingPathComponent(".config/amp/plugins/giraffy.ts")
     }
 
     static func ampPluginInstalled() -> Bool {
@@ -2547,7 +2547,7 @@ export const CoucouPlugin = async (_ctx) => ({
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
         return """
-// Coucou hook plugin for Amp — generated by Coucou.app
+// Giraffy hook plugin for Amp — generated by Giraffy.app
 // Forwards every event to the Coucou notch (display only, never blocks).
 import { spawn } from 'node:child_process';
 
@@ -2601,7 +2601,7 @@ export default function (amp: any): void {
         let current = (try? Data(contentsOf: url)) ?? Data()
         guard sha256Hex(current) == fp else {
             throw NSError(domain: "Coucou", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "~/.config/amp/plugins/coucou.ts changed since preview. Refresh and try again."
+                NSLocalizedDescriptionKey: "~/.config/amp/plugins/giraffy.ts changed since preview. Refresh and try again."
             ])
         }
         guard let content = _pendingAmpContent else {
@@ -2614,7 +2614,7 @@ export default function (amp: any): void {
             fmt.locale = Locale(identifier: "en_US_POSIX")
             fmt.dateFormat = "yyyyMMdd-HHmmss"
             let backupURL = url.deletingLastPathComponent()
-                .appendingPathComponent("coucou.ts.bak-\(fmt.string(from: Date()))")
+                .appendingPathComponent("giraffy.ts.bak-\(fmt.string(from: Date()))")
             try fm.copyItem(at: url, to: backupURL)
         }
         try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -2627,9 +2627,9 @@ export default function (amp: any): void {
         let url = Self.ampPluginURL
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        guard content.contains("generated by Coucou") else {
+        guard content.contains("generated by Giraffy") else {
             throw NSError(domain: "Coucou", code: 3, userInfo: [
-                NSLocalizedDescriptionKey: "~/.config/amp/plugins/coucou.ts was not generated by Coucou — not deleting it."
+                NSLocalizedDescriptionKey: "~/.config/amp/plugins/giraffy.ts was not generated by Giraffy — not deleting it."
             ])
         }
         try FileManager.default.removeItem(at: url)
@@ -2744,7 +2744,7 @@ export default function (amp: any): void {
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
         return """
-# Coucou hook plugin for Hermes Agent — generated by Coucou.app
+# Giraffy hook plugin for Hermes Agent — generated by Giraffy.app
 # Session/tool events → Coucou notch (fire-and-forget, never blocks).
 # Approval transport: uses register_approval_transport when available (future Hermes),
 # falls back to pre_approval_request observer-only hook (hermes 0.15.x).
@@ -2894,7 +2894,7 @@ def register(ctx) -> None:
     private static let hermesPluginYaml = """
 name: coucou
 version: "1.0"
-description: Coucou notch integration — generated by Coucou.app
+description: Giraffy notch integration — generated by Giraffy.app
 """
 
     /// Merges Coucou keys into a Hermes config.yaml string without touching other settings.
@@ -3137,9 +3137,9 @@ description: Coucou notch integration — generated by Coucou.app
         let url = Self.hermesInitPyURL
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        guard content.contains("generated by Coucou") else {
+        guard content.contains("generated by Giraffy") else {
             throw NSError(domain: "Coucou", code: 3, userInfo: [
-                NSLocalizedDescriptionKey: "~/.hermes/plugins/coucou/__init__.py was not generated by Coucou — not deleting it."
+                NSLocalizedDescriptionKey: "~/.hermes/plugins/coucou/__init__.py was not generated by Giraffy — not deleting it."
             ])
         }
         // Remove from hermes plugins.enabled first, then delete the files.
@@ -3377,7 +3377,7 @@ def main():
             return
 
     socket_path = os.path.expanduser(
-        '~/Library/Application Support/NotchBuddy/nb.sock'
+        '~/Library/Application Support/Giraffy/nb.sock'
     )
 
     # --statusline mode: relay rate_limits to Coucou, then delegate to saved previous

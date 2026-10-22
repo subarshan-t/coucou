@@ -54,7 +54,7 @@ def main():
             if arguments(unit["value"]) != arguments(target.get("value", "")):
                 errors.append(f"{key!r} {path}: format arguments differ")
     project = (ROOT / "NotchBuddy/project.yml").read_text().split("\ntargets:\n", 1)[1]
-    for name in ("NotchBuddy", "CoucouAppStore"):
+    for name in ("NotchBuddy",):
         target = re.search(rf"^  {name}:\n(.*?)(?=^  \w+:|\Z)", project, re.M | re.S)
         if not target or not re.search(r"^          - zh-Hant$", target[1], re.M):
             errors.append(f"{name}: zh-Hant is missing from bundle localizations")
@@ -71,7 +71,7 @@ def main():
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print(f"PASS: {len(catalog['strings'])} zh-Hant entries; plural paths and format arguments match; both macOS targets declare zh-Hant.")
+    print(f"PASS: {len(catalog['strings'])} zh-Hant entries; plural paths and format arguments match; the macOS target declares zh-Hant.")
     return 0
 
 

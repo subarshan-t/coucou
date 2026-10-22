@@ -15,7 +15,7 @@ enum FlowEngine: String, CaseIterable, Identifiable {
 
 /// Parakeet (speech to text) and the speaker diarizer of the Notetaker: their models, downloaded
 /// once from Hugging Face when the user clicks Download in Coucou Flow → Settings (≈ 650 MB),
-/// kept in Application Support/NotchBuddy/Models, then everything runs on this Mac.
+/// kept in Application Support/Giraffy/Models, then everything runs on this Mac.
 @MainActor
 final class Parakeet: ObservableObject {
     static let shared = Parakeet()

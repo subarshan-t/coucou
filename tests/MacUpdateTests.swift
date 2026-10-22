@@ -12,11 +12,11 @@ enum MacUpdateTests {
     static func release(_ tag: String, draft: Bool = false, pre: Bool = false, zip: Bool = true, body: String = "") -> [String: Any] {
         var assets: [[String: Any]] = [["name": "notes.txt", "browser_download_url": "https://github.com/x/notes.txt", "size": 3]]
         if zip {
-            assets.append(["name": "Coucou.zip", "size": 34_000_000,
-                           "browser_download_url": "https://github.com/Louis-CFM/coucou/releases/download/\(tag)/Coucou.zip"])
+            assets.append(["name": "Giraffy.zip", "size": 34_000_000,
+                           "browser_download_url": "https://github.com/TODO_PG_GITHUB_OWNER/giraffy/releases/download/\(tag)/Giraffy.zip"])
         }
         return ["tag_name": tag, "draft": draft, "prerelease": pre, "assets": assets, "body": body,
-                "html_url": "https://github.com/Louis-CFM/coucou/releases/tag/\(tag)"]
+                "html_url": "https://github.com/TODO_PG_GITHUB_OWNER/giraffy/releases/tag/\(tag)"]
     }
 
     static func json(_ list: [[String: Any]]) -> Data { try! JSONSerialization.data(withJSONObject: list) }
@@ -48,8 +48,8 @@ enum MacUpdateTests {
             ]
             let r = MacUpdate.latest(json(list))
             check("picks v0.10.0 over 0.6.2 and 0.5.1", r?.version == "0.10.0" && r?.tag == "v0.10.0")
-            check("its Coucou.zip", r?.zipURL.lastPathComponent == "Coucou.zip" && r?.size == 34_000_000)
-            check("its page", r?.pageURL.absoluteString == "https://github.com/Louis-CFM/coucou/releases/tag/v0.10.0")
+            check("its Giraffy.zip", r?.zipURL.lastPathComponent == "Giraffy.zip" && r?.size == 34_000_000)
+            check("its page", r?.pageURL.absoluteString == "https://github.com/TODO_PG_GITHUB_OWNER/giraffy/releases/tag/v0.10.0")
             check("headline from the bold part", r?.headline == "One-click update")
             check("nothing for drafts and others only", MacUpdate.latest(json([release("v0.9.0", draft: true), release("windows-v1.0")])) == nil)
             check("garbage", MacUpdate.latest(Data("{\"message\":\"rate limited\"}".utf8)) == nil)
@@ -92,10 +92,10 @@ enum MacUpdateTests {
         check("Later on an older version: this one shows", MacUpdate.shouldAnnounce(r, current: "0.5.1", snoozedVersion: "0.5.2", snoozedAt: now - 60, now: now))
 
         print("\nThe app in the zip")
-        check("right id and version", MacUpdate.matches(infoPlist: ["CFBundleIdentifier": "fr.louisraille.NotchBuddy", "CFBundleShortVersionString": "0.6.0"], version: "0.6.0"))
+        check("right id and version", MacUpdate.matches(infoPlist: ["CFBundleIdentifier": "au.com.purplegiraffe.Giraffy", "CFBundleShortVersionString": "0.6.0"], version: "0.6.0"))
         check("another app", !MacUpdate.matches(infoPlist: ["CFBundleIdentifier": "com.evil.app", "CFBundleShortVersionString": "0.6.0"], version: "0.6.0"))
-        check("another version", !MacUpdate.matches(infoPlist: ["CFBundleIdentifier": "fr.louisraille.NotchBuddy", "CFBundleShortVersionString": "0.5.9"], version: "0.6.0"))
-        check("requirement names the team", MacUpdate.codeRequirement.contains("256AUJ9555") && MacUpdate.codeRequirement.contains("anchor apple generic"))
+        check("another version", !MacUpdate.matches(infoPlist: ["CFBundleIdentifier": "au.com.purplegiraffe.Giraffy", "CFBundleShortVersionString": "0.5.9"], version: "0.6.0"))
+        check("requirement names the team", MacUpdate.codeRequirement.contains(MacUpdate.teamId) && MacUpdate.codeRequirement.contains("anchor apple generic"))
 
         if failures > 0 {
             print("\n\(failures) failure(s)")

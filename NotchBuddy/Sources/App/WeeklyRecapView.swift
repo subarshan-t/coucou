@@ -302,7 +302,7 @@ struct RecapShareImageView: View {
 
                 Spacer()
 
-                Text("Coucou · github.com/Louis-CFM/coucou")
+                Text(verbatim: "Giraffy · Purple Giraffe")
                     .font(.system(size: 20, weight: .medium, design: .monospaced))
                     .foregroundColor(Color(hex: "#8E939C").opacity(0.6))
                     .padding(.bottom, 60)

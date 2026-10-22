@@ -439,7 +439,7 @@ struct SettingsView: View {
         }
 
         #if !APPSTORE
-        UpdateSettingsSection()
+        if MacUpdater.isEnabled { UpdateSettingsSection() }
         #endif
 
         GroupBox(String(localized: "Weekly recap")) {
@@ -501,6 +501,23 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
+            .padding(6)
+        }
+
+        GroupBox(String(localized: "settings.about")) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(verbatim: "Giraffy \(appVersion) · Purple Giraffe")
+                    .font(.system(size: 12, weight: .medium))
+                // MIT licence credit to the upstream project; keep it.
+                Text(verbatim: "Based on Coucou by Louis Raillé (MIT).")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Text(verbatim: "Support: TODO_PG_SUPPORT_URL")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(6)
         }
 
@@ -601,7 +618,7 @@ struct SettingsView: View {
                     #endif
                 }
                 #if APPSTORE
-                Text("~/.claude/coucou/nb-hook")
+                Text("~/.claude/giraffy/nb-hook")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {
@@ -756,7 +773,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(copilotHooksInstalled
                      ? String(localized: "hooks.copilot.installed")
-                     : "~/.copilot/hooks/coucou.json")
+                     : "~/.copilot/hooks/giraffy.json")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {
@@ -822,7 +839,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(openCodePluginInstalled
                      ? String(localized: "plugin.opencode.installed")
-                     : "~/.config/opencode/plugins/coucou.js")
+                     : "~/.config/opencode/plugins/giraffy.js")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {
@@ -855,7 +872,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(ampPluginInstalled
                      ? String(localized: "plugin.amp.installed")
-                     : "~/.config/amp/plugins/coucou.ts")
+                     : "~/.config/amp/plugins/giraffy.ts")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {

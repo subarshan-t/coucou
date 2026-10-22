@@ -279,7 +279,7 @@ final class AppState: ObservableObject {
 
     // Selected app language ("" = System, else BCP-47 code e.g. "fr")
     @Published var appLanguage: String = {
-        let bundleId = Bundle.main.bundleIdentifier ?? "fr.louisraille.NotchBuddy"
+        let bundleId = Bundle.main.bundleIdentifier ?? "au.com.purplegiraffe.Giraffy"
         let langs = UserDefaults.standard.persistentDomain(forName: bundleId)?["AppleLanguages"] as? [String]
         return langs?.first ?? ""
     }()

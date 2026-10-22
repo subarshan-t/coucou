@@ -118,6 +118,14 @@ enum USEyeShape { case pill, cup, content }
 
 struct USMouthRect { var x,y,w,h: Double }
 
+/// Head units per point for Giraffy in the file drop (his head is about the old body's height).
+func usGiraffyUnit(d: Double) -> Double { d / 2 / 1.04 / 30 }
+
+/// How far Giraffy's mouth is open (0…1) while he swallows the file.
+func usGiraffyMouthOpen(_ f: USFrame) -> Double {
+    max(0, min(1, f.mouth * max(0, min(f.morph, 1)) / 0.42))
+}
+
 struct USFrame {
     var t: Double = 0
     var cursorX: Double = 600; var cursorY: Double = 280
@@ -417,18 +425,14 @@ final class UploadSequenceEngine {
         f.greenWash = max(hoverGreen, uploadGreen)
         f.chooseAlpha = usSeg(pt, growStart+0.15, growEnd)
 
-        // Mouth rect in island coords (used by drawFile for clipping)
-        let R  = d / 2 / 1.04
-        let mc = max(0, min(morph, 1.0))
-        let rx = R * (1.04 - 0.04*mc)
-        let ry = R * (0.97 - 0.03*mc)
-        let mh = f.mouth * R * mc
-        let mw = 2*rx - 0.24*R
-        let mxOff = -mw/2
-        let myOff = -ry + 0.10*R
+        // Giraffy's open mouth in island coords (drawFile shrinks the file into it and clips it there).
+        let u  = usGiraffyUnit(d: d)
+        let mo = usGiraffyMouthOpen(f)
+        let mw = (6 + 4*mo) * u
+        let mh = (1.6 + 7.2*mo) * u
         f.mouthRect = USMouthRect(
-            x: x + mxOff * sx,
-            y: y + f.hop + myOff * sy,
+            x: x - mw/2 * sx,
+            y: y + f.hop + (25.3*u - mh/2) * sy,
             w: mw * sx,
             h: mh * sy
         )

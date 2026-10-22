@@ -131,6 +131,17 @@ jobs:
       - name: Giraffy theme tests
         run: bash scripts/test-giraffy-theme.sh
 
+      - name: Giraffy drawing tests (renders every pose)
+        run: GIRAFFY_RENDER_DIR="$RUNNER_TEMP/giraffy-renders" bash scripts/test-giraffy-drawing.sh
+
+      - name: Upload Giraffy renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: giraffy-renders
+          path: ${{ runner.temp }}/giraffy-renders
+          if-no-files-found: ignore
+
       - name: Claude settings file tests
         run: bash scripts/test-claude-settings.sh
 

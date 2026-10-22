@@ -57,7 +57,8 @@ final class AppState: ObservableObject {
     @Published var fileDragOver: Bool = false
 
     // Sound enabled — persisted
-    @Published var soundEnabled: Bool = true {
+    // Off until PG supplies Giraffy's sounds; your own files in the sounds folder still play.
+    @Published var soundEnabled: Bool = false {
         didSet { UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled") }
     }
 

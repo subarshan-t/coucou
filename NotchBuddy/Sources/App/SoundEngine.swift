@@ -24,8 +24,9 @@ final class SoundEngine {
                              "send","love","pop","proud","wink","yawn","attach","think","search",
                              "rate","sleep","greeting"]
 
-    /// Your own sounds: a file named like a built-in sound (e.g. finish.wav, approval.mp3) in this
-    /// folder replaces it. ~/Library/Application Support/Giraffy/Sounds (in the App Store build,
+    /// Your own sounds: a file named like one of these (e.g. finish.wav, approval.mp3) in this
+    /// folder plays for that moment. Giraffy ships no sounds of its own yet (Coucou's are not
+    /// ours to use), so without custom files he is silent. ~/Library/Application Support/Giraffy/Sounds (in the App Store build,
     /// the same path inside the app's container).
     static var customFolder: URL? {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?

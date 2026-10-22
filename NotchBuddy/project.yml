@@ -65,9 +65,6 @@ targets:
           - "NotificationContent/**"
       - path: Assets.xcassets
         buildPhase: resources
-      - path: Resources/sounds
-        buildPhase: resources
-        type: folder
       - path: Resources/Localizable.xcstrings
         buildPhase: resources
     info:

@@ -57,8 +57,8 @@ final class AppState: ObservableObject {
     @Published var fileDragOver: Bool = false
 
     // Sound enabled — persisted
-    // Off until PG supplies Giraffy's sounds; your own files in the sounds folder still play.
-    @Published var soundEnabled: Bool = false {
+    // On: scripts/dev-install.sh puts sounds in the custom sounds folder for this Mac.
+    @Published var soundEnabled: Bool = true {
         didSet { UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled") }
     }
 

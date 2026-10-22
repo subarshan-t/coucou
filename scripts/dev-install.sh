@@ -65,5 +65,28 @@ for old in "${HOME}"/Library/Developer/Xcode/DerivedData/NotchBuddy-*/Build/Prod
 done
 "${LSREGISTER}" -f "${TARGET}" >/dev/null 2>&1 || true
 
+# Sounds: Coucou's, copied into Giraffy's custom sounds folder on this Mac only (personal
+# use is allowed by LICENSE-ASSETS.md; they are never put in the app or the repo).
+# GIRAFFY_SOUNDS=none skips this; an existing file in the folder is never overwritten.
+if [ "${GIRAFFY_SOUNDS:-coucou}" = "coucou" ]; then
+  SOUNDS="${HOME}/Library/Application Support/Giraffy/Sounds"
+  REF="1e51809"   # the Coucou commit Giraffy was forked from
+  cd "${REPO_ROOT}"
+  git cat-file -e "${REF}^{commit}" 2>/dev/null || git fetch --quiet https://github.com/Louis-CFM/coucou.git main || true
+  if git cat-file -e "${REF}^{commit}" 2>/dev/null; then
+    mkdir -p "${SOUNDS}"
+    added=0
+    for path in $(git ls-tree --name-only "${REF}" NotchBuddy/Resources/sounds/); do
+      out="${SOUNDS}/$(basename "${path}")"
+      [ -e "${out}" ] && continue
+      git show "${REF}:${path}" > "${out}"
+      added=$((added + 1))
+    done
+    echo "Sounds: ${added} added to ${SOUNDS}."
+  else
+    echo "Sounds: couldn't get Coucou's sounds (no network?); Giraffy stays silent."
+  fi
+fi
+
 open "${TARGET}"
 echo "Giraffy is running from ${TARGET}."

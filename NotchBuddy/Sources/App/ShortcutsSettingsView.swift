@@ -49,9 +49,9 @@ struct ShortcutsSettingsView: View {
     /// Shortcuts listed here. The App Store build hides the ones it can't run.
     private var globalActions: [ShortcutAction] {
         #if APPSTORE
-        ShortcutAction.allCases.filter { !$0.isNonAppStore }
+        ShortcutAction.allCases.filter { !$0.isNonAppStore && GiraffyFeatures.offers($0) }
         #else
-        ShortcutAction.allCases
+        ShortcutAction.allCases.filter { GiraffyFeatures.offers($0) }
         #endif
     }
 

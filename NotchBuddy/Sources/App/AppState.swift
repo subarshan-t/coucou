@@ -103,6 +103,7 @@ final class AppState: ObservableObject {
     // so a frame costs one date comparison instead of calendar math.
     private var _seasonalCache: (validUntil: Date, outfit: Outfit)?
     var resolvedOutfit: Outfit {
+        guard GiraffyFeatures.outfits else { return .none }
         if let preview = wardrobePreviewOutfit { return preview }
         guard mochiOutfitSelection == .auto else { return mochiOutfitSelection }
         let now = Date()
@@ -355,7 +356,7 @@ final class AppState: ObservableObject {
     }
 
     // Active integration pills (main workspace pill excluded). Max 4.
-    @Published var activeIntegrations: Set<String> = ["integration_resend", "integration_n8n", "integration_vercel", "integration_github"] {
+    @Published var activeIntegrations: Set<String> = ["integration_vercel", "integration_github"] {
         didSet {
             if let data = try? JSONEncoder().encode(Array(activeIntegrations)) {
                 UserDefaults.standard.set(data, forKey: "activeIntegrations")

@@ -707,6 +707,7 @@ final class IslandWindowController: NSWindowController {
             DesktopMochiController.shared.flyOutOrHome()
 
         case .wardrobeToggle:
+            guard GiraffyFeatures.outfits else { break }
             if state.mode == .expanded && state.view == .wardrobe {
                 collapse()
             } else {
@@ -905,7 +906,7 @@ final class IslandWindowController: NSWindowController {
 
         // Wardrobe open/close from desktop Mochi right-click (does NOT post .hookExpand)
         NotificationCenter.default.addObserver(forName: .openWardrobeFromDesktop, object: nil, queue: .main) { [weak self] _ in
-            guard let self else { return }
+            guard let self, GiraffyFeatures.outfits else { return }
             if self.state.mode == .expanded && self.state.view == .wardrobe {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     self.state.view = .overview
@@ -1040,6 +1041,7 @@ final class IslandWindowController: NSWindowController {
         NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
             guard let self else { return event }
             MainActor.assumeIsolated {
+                guard GiraffyFeatures.outfits else { return }
                 guard self.wasInIsland, self.isBotHit(event.locationInWindow) else { return }
                 guard !self.state.mochiOnDesktop else { return }
                 if self.state.mode == .expanded && self.state.view == .wardrobe {

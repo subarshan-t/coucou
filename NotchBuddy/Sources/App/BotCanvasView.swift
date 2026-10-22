@@ -61,8 +61,8 @@ struct BotCanvasView: View {
                 let dancing: Bool = {
                     #if !APPSTORE
                     let active = AppState.shared.activeIntegrations
-                    let music = AppState.shared.musicPlaying && active.contains("integration_music")
-                    let spotify = SpotifyController.shared.isPlaying && active.contains(SpotifyController.pillId)
+                    let music = active.contains("integration_music") && AppState.shared.musicPlaying
+                    let spotify = active.contains(SpotifyController.pillId) && SpotifyController.shared.isPlaying
                     guard music || spotify else { return false }
                     let allowed: Set<BotState> = [.idle, .working, .thinking, .searching, .finished]
                     guard allowed.contains(state.effectiveState) else { return false }

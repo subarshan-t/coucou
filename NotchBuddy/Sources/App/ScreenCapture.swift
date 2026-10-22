@@ -404,7 +404,7 @@ struct CaptureAnnotationView: View {
             Button(String(localized: "capture.done")) { onDone(render()) }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .tint(Color(hex: "#FB923C"))
+                .tint(GiraffyTheme.accent)
         }
         .foregroundColor(Color(hex: "#F5F6F8"))
         .padding(.leading, 82)      // clear of the window's buttons

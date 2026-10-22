@@ -22,7 +22,7 @@ struct FlowAnnouncement: Equatable, Identifiable {
     /// An SF Symbol.
     var symbol: String
     /// Its colour.
-    var tint: String = "#FB923C"
+    var tint: String = GiraffyTheme.accentHex
     var text: String
     /// The button's title, if there is something to do.
     var action: String?
@@ -36,7 +36,7 @@ final class FlowPillModel: ObservableObject {
         case idle
         /// The key is held: the pill opens, Mochi on the left, the dots follow the voice.
         case listening
-        /// Hands-free (double tap, or the pill's microphone): ✕, the dots and ✓, with an orange ring.
+        /// Hands-free (double tap, or the pill's microphone): ✕, the dots and ✓, with an accent ring.
         case locked
         /// Released: the Mac turns the voice into words.
         case thinking
@@ -245,7 +245,7 @@ struct FlowPillView: View {
             Capsule()
                 .strokeBorder(Color.white.opacity(open ? 0.16 : 0.42), lineWidth: open ? 1 : 1.2)
             Capsule()
-                .strokeBorder(Color(hex: "#F97316").opacity(look == .handsFree ? 0.85 : 0), lineWidth: 1.5)
+                .strokeBorder(GiraffyTheme.accent.opacity(look == .handsFree ? 0.85 : 0), lineWidth: 1.5)
             content
                 .opacity(open ? 1 : 0)
                 .scaleEffect(open ? 1 : 0.5)

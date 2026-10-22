@@ -71,7 +71,7 @@ enum HubPage: String, CaseIterable, Identifiable {
     }
 }
 
-/// The colors of the Coucou Flow window: the island's dark, with Coucou's orange.
+/// The colors of the Flow window: the island's dark, with Giraffy's purple accent (GiraffyTheme).
 enum HubTheme {
     /// OLED black: the window and the sidebar.
     static let window = Color.black
@@ -85,8 +85,8 @@ enum HubTheme {
     static let body = Color(hex: "#E1E3E6")
     static let secondary = Color(hex: "#8E939C")
     static let muted = Color(hex: "#6B7079")
-    static let accent = Color(hex: "#FB923C")
-    static let onAccent = Color(hex: "#170C04")
+    static let accent = GiraffyTheme.accent
+    static let onAccent = GiraffyTheme.onAccent
     static let green = Color(hex: "#34D399")
     static let red = Color(hex: "#FF453A")
     /// One color per person in a call: you first, then the others.

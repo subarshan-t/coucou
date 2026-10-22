@@ -165,6 +165,13 @@ final class HookServer: @unchecked Sendable {
         }
     }
 
+    /// One line in the approval audit log (ApprovalAuditLog), redacted, local only.
+    @MainActor
+    private func recordAudit(_ entry: QueuedApproval, _ decision: AuditDecision, via: AuditVia = .none) {
+        ApprovalAuditLog.shared.record(pillId: entry.pillId, project: entry.projectName, tool: entry.tool,
+                                       target: entry.command, decision: decision, via: via)
+    }
+
     // MARK: - Question fd helpers
 
     @MainActor
@@ -503,6 +510,7 @@ final class HookServer: @unchecked Sendable {
             let eventKey = Self.approvalInputKey(payload["tool_input"] as? [String: Any] ?? [:])
             for entry in approvals.resolved(byEvent: name, sessionId: sessionId, pillId: agentId,
                                             tool: eventTool, inputKey: eventKey) {
+                recordAudit(entry, .terminal)
                 removeApproval(id: entry.id, note: handledNote(pill: entry.pillId))
             }
             // A session still waiting on a decision is held back (its parallel tool calls
@@ -921,7 +929,8 @@ final class HookServer: @unchecked Sendable {
         let capturedPillId = pillId
         let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: .main)
         source.setEventHandler { [weak self] in
-            guard let self, self.approvals.contains(id: entryId) else { return }
+            guard let self, let entry = self.approvals.entries.first(where: { $0.id == entryId }) else { return }
+            self.recordAudit(entry, .terminal)
             self.removeApproval(id: entryId, note: self.handledNote(pill: capturedPillId))
         }
         source.setCancelHandler { close(fd) }
@@ -933,7 +942,8 @@ final class HookServer: @unchecked Sendable {
         // Copilot/Muse use 110s (their relay waits 118s but their hook timeout is 120s, leaving little margin).
         let waitTimeout: Double = (isCopilotRequest || isMuseRequest) ? 110 : 115
         DispatchQueue.main.asyncAfter(deadline: .now() + waitTimeout) { [weak self] in
-            guard let self, self.approvals.contains(id: entryId) else { return }
+            guard let self, let entry = self.approvals.entries.first(where: { $0.id == entryId }) else { return }
+            self.recordAudit(entry, .timeout)
             self.removeApproval(id: entryId, note: self.waitingNote(pill: capturedPillId))
         }
 
@@ -984,6 +994,10 @@ final class HookServer: @unchecked Sendable {
         // The recap only counts allow / always / deny.
         let recapDecision = ["plan_auto": "allow", "plan_default": "allow", "plan_change": "deny"][decision] ?? decision
         RecapStore.shared.recordDecision(pillId: head.pillId, decision: recapDecision)
+        let auditDecisions: [String: AuditDecision] = ["allow": .allow, "plan_auto": .allow, "plan_default": .allow,
+                                                       "always": .always, "ask": .terminal]
+        let audit = auditDecisions[decision] ?? .deny
+        recordAudit(head, audit, via: .notch)
         removeApproval(id: head.id, answer: json)
         if decision == "plan_change" { ClaudeHost.activate(head.hostApp) }
     }

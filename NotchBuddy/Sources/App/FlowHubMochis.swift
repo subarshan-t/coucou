@@ -256,6 +256,9 @@ struct HubHeroTheme {
             return .init(color: Color(hex: "#3B9EFF"), cast: [m("#3B9EFF", 56, 0.1, state: .working, roams: false),
                                                                m("#E07950", 50, 0.5, state: .thinking, roams: false),
                                                                m("#34D399", 50, 0.9)])
+        case .approvals:
+            return .init(color: GiraffyTheme.accent, cast: [m(GiraffyTheme.pgPurpleHex, 58, 0.2, state: .approval, roams: false),
+                                                             m("#F5F6F8", 46, 0.8)])
         case .chat:
             return .init(color: Color(hex: "#E07950"), cast: [m("#E07950", 58, 0.3, state: .thinking, roams: false), m("#F5F6F8", 48, 0.85)])
         case .integrations:

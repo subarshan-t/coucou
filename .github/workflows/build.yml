@@ -36,6 +36,9 @@ jobs:
       - name: Test approval audit log (redaction, retention, CSV, file)
         run: bash scripts/test-approval-audit.sh
 
+      - name: Test agent usage (Claude Code and Codex session files, accounts)
+        run: bash scripts/test-agent-usage.sh
+
       - name: Test Flow dictation keys
         run: bash scripts/test-flow-keys.sh
 

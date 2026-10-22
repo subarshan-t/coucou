@@ -6,12 +6,12 @@ import SwiftUI
 /// The pages of the Coucou window: Flow (the dictation, the Notetaker) and the notch's settings.
 enum HubPage: String, CaseIterable, Identifiable {
     case dictation, notes, insights, dictionary, snippets, styles, settings
-    case general, pills, agents, approvals, chat, integrations, voice, shortcuts
+    case general, pills, agents, approvals, usage, chat, integrations, voice, shortcuts
 
     var id: String { rawValue }
 
     static let flowPages: [HubPage] = [.dictation, .notes, .insights, .dictionary, .snippets, .styles, .settings]
-    static let notchPages: [HubPage] = [.general, .pills, .agents, .approvals, .chat, .integrations, .voice, .shortcuts]
+    static let notchPages: [HubPage] = [.general, .pills, .agents, .approvals, .usage, .chat, .integrations, .voice, .shortcuts]
 
     /// The section of Settings this page shows, for the notch's pages.
     var settingsSection: String? {
@@ -38,6 +38,7 @@ enum HubPage: String, CaseIterable, Identifiable {
         case .pills:        return String(localized: "Active pills")
         case .agents:       return String(localized: "Agents")
         case .approvals:    return String(localized: "audit.page.title")
+        case .usage:        return String(localized: "usage.page.title")
         case .chat:         return String(localized: "Chat")
         case .integrations: return String(localized: "Integrations")
         case .voice:        return String(localized: "Voice")
@@ -65,6 +66,7 @@ enum HubPage: String, CaseIterable, Identifiable {
         case .pills:        return "square.grid.2x2"
         case .agents:       return "terminal"
         case .approvals:    return "checkmark.shield"
+        case .usage:        return "gauge.with.dots.needle.33percent"
         case .chat:         return "bubble.left.and.bubble.right"
         case .integrations: return "puzzlepiece.extension"
         case .voice:        return "waveform"
@@ -234,6 +236,7 @@ struct FlowHubView: View {
         case .styles:     HubStylesPage(router: router)
         case .settings:   HubSettingsPage()
         case .approvals:  HubApprovalsPage()
+        case .usage:      HubUsagePage()
         default:
             if let section = router.page.settingsSection {
                 VStack(alignment: .leading, spacing: 0) {

@@ -796,6 +796,10 @@ final class HookServer: @unchecked Sendable {
 
     @MainActor
     private func processStatusLine(payload: [String: Any]) {
+        // Per account, for the Usage page.
+        UsageStore.shared.recordStatusLine(rateLimits: payload["rate_limits"] as? [String: Any] ?? [:],
+                                           configDir: payload["config_dir"] as? String ?? "",
+                                           transcriptPath: payload["transcript_path"] as? String ?? "")
         guard let usage = ClaudePlanGauge.parse(payload: payload) else { return }
         // Claude Code calls the status line several times a second: publish (and save to
         // UserDefaults) only when the numbers change, or every 30 s for "updated … ago".
@@ -3400,6 +3404,9 @@ def main():
             'coucou_kind': 'statusline',
             'session_id': payload.get('session_id', ''),
             'rate_limits': payload.get('rate_limits', {}),
+            # Which Claude account this is (Usage page): its config folder.
+            'transcript_path': payload.get('transcript_path', ''),
+            'config_dir': os.environ.get('CLAUDE_CONFIG_DIR', ''),
         }
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -3753,6 +3760,9 @@ def main():
             'coucou_kind': 'statusline',
             'session_id': payload.get('session_id', ''),
             'rate_limits': payload.get('rate_limits', {}),
+            # Which Claude account this is (Usage page): its config folder.
+            'transcript_path': payload.get('transcript_path', ''),
+            'config_dir': os.environ.get('CLAUDE_CONFIG_DIR', ''),
         }
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

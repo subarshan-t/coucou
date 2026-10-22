@@ -259,6 +259,9 @@ struct HubHeroTheme {
         case .approvals:
             return .init(color: GiraffyTheme.accent, cast: [m(GiraffyTheme.pgPurpleHex, 58, 0.2, state: .approval, roams: false),
                                                              m("#F5F6F8", 46, 0.8)])
+        case .usage:
+            return .init(color: Color(hex: "#22C55E"), cast: [m(GiraffyTheme.pgPurpleHex, 56, 0.25, state: .working, roams: false),
+                                                             m("#F5F6F8", 46, 0.85)])
         case .chat:
             return .init(color: Color(hex: "#E07950"), cast: [m("#E07950", 58, 0.3, state: .thinking, roams: false), m("#F5F6F8", 48, 0.85)])
         case .integrations:

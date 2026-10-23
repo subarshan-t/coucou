@@ -74925,6 +74925,50 @@
           }
         }
       }
+    },
+    "chat.openrouter.hint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Works with a free OpenRouter account: free models (ids ending in :free) are listed first in the chat's model menu."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fonctionne avec un compte OpenRouter gratuit : les modèles gratuits (identifiants finissant par :free) sont en tête du menu des modèles du chat."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免費的 OpenRouter 帳號也能用：免費模型（ID 以 :free 結尾）會列在聊天模型選單的最前面。"
+          }
+        }
+      }
+    },
+    "status.openrouter-key-saved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OpenRouter key saved."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé OpenRouter enregistrée."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已儲存 OpenRouter 金鑰。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

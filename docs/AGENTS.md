@@ -101,7 +101,7 @@ A catalog pill that is not checked in Settings behaves like any other agent: it 
 
 The GitHub build exposes Gemini CLI (`agent_gemini`), Antigravity (`agent_antigravity`),
 GitHub Copilot CLI (`agent_copilot`), Muse Code (`agent_muse`), OpenCode (`agent_opencode`),
-Amp (`agent_amp`) and Hermes (`agent_hermes`) in Settings → Active pills. Cursor (`agent_cursor`) and Codex
+Amp (`agent_amp`), Hermes (`agent_hermes`) and Grok Build (`agent_grok`) in Settings → Active pills. Cursor (`agent_cursor`) and Codex
 (`agent_codex`, GitHub build only) are there too — their pills can be declared and set as
 the main pill; session support is coming in a future version.
 
@@ -222,6 +222,35 @@ Every event is fire-and-forget: if the app is closed or unreachable, nothing is 
 | `on_session_start` | `SessionStart` |
 | `post_llm_call` | `Stop` |
 | `pre_approval_request` | `PreToolUse` (observer only, shows "⏳ Approval pending in Hermes") |
+
+### Grok Build (macOS)
+
+Coucou supports xAI's Grok Build (`grok`) via **Settings → Agents → Grok Build hooks → Install hooks**.
+The installer writes its own file, `~/.grok/hooks/coucou.json` (Grok reads every file in
+`~/.grok/hooks/`, so the user's other hook files are never touched), and uses `--agent grok`.
+The relay maps Grok's camelCase fields (`sessionId`, `toolName`, `toolInput`,
+`lastAssistantMessage`) to the canonical ones. Every event is display-only: the relay prints
+nothing, so Grok's own permission flow stays in charge and Coucou never allows or denies a tool.
+
+| Grok Build event | Canonical event |
+|---|---|
+| `SessionStart` | `SessionStart` |
+| `UserPromptSubmit` | `UserPromptSubmit` |
+| `PreToolUse` | `PreToolUse` |
+| `PostToolUse` | `PostToolUse` |
+| `Stop` | `Stop` |
+| `SessionEnd` | `SessionEnd` |
+
+**Many agents, one pill.** Grok users often run a dozen agents at once, more than the notch has
+room for. They all share the Grok Build pill, which stays *working* while any of them is. The
+card's subtitle reads "3 of 19 working ›"; a click opens the session list: one row per agent with
+its status (thinking, working, finished, error), its current step and how long it has been at it.
+Working agents come first, in the order they started; stopped ones stay 15 minutes, latest first.
+
+A row is named after the agent when the hook payload says which one it is (`agentName`,
+`agent_name`, `subagentType` or `subagent_type`), else after `COUCOU_AGENT_LABEL` from the agent's
+environment (`COUCOU_AGENT_LABEL=reviewer grok`), else after the session's folder. Two sessions in
+the same folder read `api`, `api 2`.
 
 ### Any other tool
 

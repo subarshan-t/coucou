@@ -30,6 +30,9 @@ jobs:
       - name: Test parallel Claude Code sessions
         run: bash scripts/test-session-registry.sh
 
+      - name: Test agent session list (Grok Build)
+        run: bash scripts/test-agent-session-board.sh
+
       - name: Test approval queue
         run: bash scripts/test-approval-queue.sh
 

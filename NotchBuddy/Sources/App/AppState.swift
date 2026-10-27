@@ -14,6 +14,8 @@ final class AppState: ObservableObject {
     // Tasks
     @Published var tasks: [AgentTask] = []
     @Published var focusId: String? = nil
+    /// Sessions behind a pill that lists them (HookServer.listedPills), active first.
+    @Published var agentSessionRows: [String: [AgentSessionBoard.Row]] = [:]
 
     // Bot state override
     @Published var stateOverride: BotState? = nil

@@ -32,6 +32,7 @@ enum EntityResolver {
         "muse":                 "agent_muse",
         "hermes":               "agent_hermes",
         "amp":                  "agent_amp",
+        "grok":                 "agent_grok",
         "opencode":             "agent_opencode",
         "antigravity":          "agent_antigravity",
         "codex":                "agent_codex",

@@ -59,6 +59,9 @@ final class HookServer: @unchecked Sendable {
     private var focusBeforeAlert: String? = nil       // saved focus while another pill's card shows
     private var alertPill: String? = nil              // the pill that took the focus for its alert
     private var sessions = PillSessionRegistry()      // live sessions behind each pill
+    private var agentBoard = AgentSessionBoard()      // per-session rows for listed pills
+    /// Pills whose card lists their sessions. Grok Build users run many agents at once.
+    static let listedPills: Set<String> = ["agent_grok"]
 
     private init() {}
 
@@ -516,6 +519,11 @@ final class HookServer: @unchecked Sendable {
             if approvals.hasEntries(forPill: agentId) { state.updateTask(id: agentId, state: .approval) }
         }
 
+        if Self.listedPills.contains(agentId) {
+            recordOnBoard(event: name, payload: payload, pill: agentId,
+                          session: sessionId, projectName: projectName)
+        }
+
         switch name {
 
         case "SessionStart":
@@ -685,6 +693,55 @@ final class HookServer: @unchecked Sendable {
         default:
             break
         }
+    }
+
+    // MARK: - Session list (listed pills)
+
+    /// One row per session for the pill's list: what each agent is doing, not only
+    /// the last step any of them took. The pill itself is handled by processEvent.
+    @MainActor
+    private func recordOnBoard(event: String, payload: [String: Any], pill: String,
+                               session: String, projectName: String) {
+        // The relay names the row after the agent when Grok says which one it is,
+        // else the session's folder.
+        let label = (payload["coucou_session_label"] as? String).map { String($0.prefix(40)) }
+            ?? projectName
+        let status: AgentSessionBoard.Status
+        var step: String? = nil
+        switch event {
+        case "SessionStart":
+            status = .idle
+        case "UserPromptSubmit":
+            status = .thinking
+            step = payload["prompt"] as? String
+        case "PreToolUse":
+            status = .working
+            step = localizedStep(tool: payload["tool_name"] as? String ?? "Tool",
+                                 input: payload["tool_input"] as? [String: Any] ?? [:])
+        case "PostToolUse":
+            status = .working
+        case "PostToolUseFailure":
+            status = .working
+            step = "⚠ failed"
+        case "Stop":
+            status = .finished
+            step = DiffEngine.toOneLine((payload["last_assistant_message"] as? String)
+                                        ?? (payload["message"] as? String) ?? "")
+        case "StopFailure":
+            status = .error
+            step = Self.stopFailureDetail(payload)
+        case "Interrupt":
+            status = .idle
+        case "SessionEnd":
+            agentBoard.remove(pill: pill, session: session)
+            AppState.shared.agentSessionRows[pill] = agentBoard.rows(pill: pill)
+            return
+        default:
+            return
+        }
+        agentBoard.record(pill: pill, session: session, label: label, status: status,
+                          step: step.map { DiffEngine.toOneLine($0) })
+        AppState.shared.agentSessionRows[pill] = agentBoard.rows(pill: pill)
     }
 
     // MARK: - Agent validation + dynamic pill
@@ -2267,6 +2324,108 @@ final class HookServer: @unchecked Sendable {
                                          options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
     }
 
+    // MARK: - Grok Build hook installer
+
+    /// Grok Build reads every file in ~/.grok/hooks/, so Coucou owns this one
+    /// file and never touches the user's other hook files.
+    static var grokHooksURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".grok/hooks/coucou.json")
+    }
+
+    /// True when ~/.grok/hooks/coucou.json already routes Grok events to Coucou's nb-hook.
+    static func grokHooksInstalled() -> Bool {
+        guard let data = try? Data(contentsOf: grokHooksURL),
+              let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let hooks = root["hooks"] as? [String: Any] else { return false }
+        for value in hooks.values {
+            guard let groups = value as? [[String: Any]] else { continue }
+            for group in groups {
+                for hook in group["hooks"] as? [[String: Any]] ?? [] {
+                    if let cmd = hook["command"] as? String,
+                       cmd.contains("nb-hook"), cmd.contains("--agent grok") { return true }
+                }
+            }
+        }
+        return false
+    }
+
+    private var _pendingGrokData: Data?
+    private var _pendingGrokFingerprint: String?
+
+    func previewGrokHooks(install: Bool) throws -> String {
+        let url = Self.grokHooksURL
+        let exists = FileManager.default.fileExists(atPath: url.path)
+        if !install && !exists {
+            throw NSError(domain: "CoucouNoop", code: 0, userInfo: [
+                NSLocalizedDescriptionKey: "No Grok Build hooks to remove."
+            ])
+        }
+        let current = exists ? try Data(contentsOf: url) : Data()
+        _pendingGrokFingerprint = sha256Hex(current)
+        if install {
+            let newData = try buildGrokHooksData()
+            _pendingGrokData = newData
+            return String(data: newData, encoding: .utf8) ?? ""
+        } else {
+            _pendingGrokData = nil  // nil = delete signal
+            return "(will delete \(url.path))"
+        }
+    }
+
+    func writeGrokHooks() throws {
+        guard let fp = _pendingGrokFingerprint else { return }
+        let url = Self.grokHooksURL
+        let current = (try? Data(contentsOf: url)) ?? Data()
+        guard sha256Hex(current) == fp else {
+            throw NSError(domain: "Coucou", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "~/.grok/hooks/coucou.json changed since preview. Refresh and try again."
+            ])
+        }
+        if let data = _pendingGrokData {
+            try writeJSONFile(data, to: url, suffix: "coucou.json")
+        } else {
+            try FileManager.default.removeItem(at: url)
+        }
+        _pendingGrokData = nil
+        _pendingGrokFingerprint = nil
+    }
+
+    private func buildGrokHooksData() throws -> Data {
+        var root = try Self.strictReadJSONObject(at: Self.grokHooksURL,
+                                                 label: "~/.grok/hooks/coucou.json")
+        if let raw = root["hooks"], !(raw is [String: Any]) {
+            throw NSError(domain: "Coucou", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "~/.grok/hooks/coucou.json: \"hooks\" has an unexpected type — Coucou has not touched it."
+            ])
+        }
+        let base = hookBase()
+        // Same shape as Claude Code: a regex matcher per group, timeouts in seconds.
+        // PreToolUse and UserPromptSubmit block Grok until the hook returns: the relay
+        // gives up after 0.3 s and prints nothing, which leaves Grok's own permission
+        // flow in charge. Coucou never allows or denies a Grok tool call.
+        let events = ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "SessionEnd"]
+        var hooks = root["hooks"] as? [String: Any] ?? [:]
+        for event in events {
+            if let raw = hooks[event], !(raw is [[String: Any]]) {
+                throw NSError(domain: "Coucou", code: 2, userInfo: [
+                    NSLocalizedDescriptionKey: "~/.grok/hooks/coucou.json: \"hooks\"[\"\(event)\"] has an unexpected type — Coucou has not touched it."
+                ])
+            }
+            var groups = removeNbHookEntries(from: hooks[event] as? [[String: Any]] ?? [])
+            let hook: [String: Any] = ["type": "command",
+                                       "command": "\(base) --agent grok \(event)",
+                                       "timeout": 5]
+            var group: [String: Any] = ["hooks": [hook]]
+            if event == "PreToolUse" || event == "PostToolUse" { group["matcher"] = ".*" }
+            groups.append(group)
+            hooks[event] = groups
+        }
+        root["hooks"] = hooks
+        return try JSONSerialization.data(withJSONObject: root,
+                                         options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+    }
+
     // MARK: - Muse Code hook installer
 
     static var museSettingsURL: URL {
@@ -3306,8 +3465,10 @@ def normalize_tool_fields(payload):
             if name:
                 payload['tool_name'] = name
     if 'tool_input' not in payload:
-        # Copilot sends toolArgs directly
+        # Copilot sends toolArgs directly, Grok Build toolInput
         tool_args = payload.get('toolArgs')
+        if not isinstance(tool_args, dict):
+            tool_args = payload.get('toolInput')
         if isinstance(tool_args, dict):
             payload['tool_input'] = tool_args
         else:
@@ -3331,6 +3492,22 @@ def normalize_tool_fields(payload):
     # Copilot sends workdir for the current working directory
     if not payload.get('cwd') and payload.get('workdir'):
         payload['cwd'] = payload['workdir']
+    # Grok Build: camelCase closing line
+    if 'last_assistant_message' not in payload and isinstance(payload.get('lastAssistantMessage'), str):
+        payload['last_assistant_message'] = payload['lastAssistantMessage']
+
+def add_session_label(payload):
+    # Names the session's row in a pill that lists its sessions (Grok Build): the agent's
+    # name when the tool sends one, else COUCOU_AGENT_LABEL from the environment
+    # (COUCOU_AGENT_LABEL=reviewer grok), else the app falls back to the folder.
+    for k in ['agentName', 'agent_name', 'subagentType', 'subagent_type']:
+        v = payload.get(k)
+        if isinstance(v, str) and v.strip():
+            payload['coucou_session_label'] = v.strip()[:40]
+            return
+    v = os.environ.get('COUCOU_AGENT_LABEL', '').strip()
+    if v:
+        payload['coucou_session_label'] = v[:40]
 
 def add_session_name(payload):
     # Name the pill after the folder the session started in, not the current cwd (the
@@ -3505,6 +3682,8 @@ def main():
         if raw_event:
             payload['hook_event_name'] = normalize_event(raw_event)
         normalize_tool_fields(payload)
+        if agent == 'grok':
+            add_session_label(payload)
     except Exception:
         pass
 
@@ -3659,8 +3838,10 @@ def normalize_tool_fields(payload):
             if name:
                 payload['tool_name'] = name
     if 'tool_input' not in payload:
-        # Copilot sends toolArgs directly
+        # Copilot sends toolArgs directly, Grok Build toolInput
         tool_args = payload.get('toolArgs')
+        if not isinstance(tool_args, dict):
+            tool_args = payload.get('toolInput')
         if isinstance(tool_args, dict):
             payload['tool_input'] = tool_args
         else:
@@ -3684,6 +3865,22 @@ def normalize_tool_fields(payload):
     # Copilot sends workdir for the current working directory
     if not payload.get('cwd') and payload.get('workdir'):
         payload['cwd'] = payload['workdir']
+    # Grok Build: camelCase closing line
+    if 'last_assistant_message' not in payload and isinstance(payload.get('lastAssistantMessage'), str):
+        payload['last_assistant_message'] = payload['lastAssistantMessage']
+
+def add_session_label(payload):
+    # Names the session's row in a pill that lists its sessions (Grok Build): the agent's
+    # name when the tool sends one, else COUCOU_AGENT_LABEL from the environment
+    # (COUCOU_AGENT_LABEL=reviewer grok), else the app falls back to the folder.
+    for k in ['agentName', 'agent_name', 'subagentType', 'subagent_type']:
+        v = payload.get(k)
+        if isinstance(v, str) and v.strip():
+            payload['coucou_session_label'] = v.strip()[:40]
+            return
+    v = os.environ.get('COUCOU_AGENT_LABEL', '').strip()
+    if v:
+        payload['coucou_session_label'] = v[:40]
 
 def add_session_name(payload):
     # Name the pill after the folder the session started in, not the current cwd (the
@@ -3857,6 +4054,8 @@ def main():
         if raw_event:
             payload['hook_event_name'] = normalize_event(raw_event)
         normalize_tool_fields(payload)
+        if agent == 'grok':
+            add_session_label(payload)
     except Exception:
         pass
 

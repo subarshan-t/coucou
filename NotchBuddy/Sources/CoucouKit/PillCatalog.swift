@@ -90,6 +90,9 @@ enum PillCatalog {
               category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
         .init(id: "agent_hermes",        name: "Hermes",      color: "#C084FC",
               category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
+        // xAI's terminal agent. Many sessions share this pill; its card lists them.
+        .init(id: "agent_grok",          name: "Grok Build",  color: "#FB7185",
+              category: .agent,     subtitle: String(localized: "Agent"),        source: .agent,  githubOnly: true),
         // Claude Code sessions run from the Claude desktop app: the relay tags them
         // `coucou_agent: claude-desktop` from CLAUDE_CODE_ENTRYPOINT, so nothing to install.
         .init(id: "agent_claude-desktop", name: "Claude Desktop", color: "#D97757",

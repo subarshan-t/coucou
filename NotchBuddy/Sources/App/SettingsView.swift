@@ -59,6 +59,11 @@ struct SettingsView: View {
     @State private var pendingCopilotJSON: String = ""
     @State private var copilotPendingInstall: Bool = true
 
+    @State private var grokHooksInstalled: Bool = HookServer.grokHooksInstalled()
+    @State private var showGrokDiff: Bool = false
+    @State private var pendingGrokJSON: String = ""
+    @State private var grokPendingInstall: Bool = true
+
     @State private var museHooksInstalled: Bool = HookServer.museHooksInstalled()
     @State private var showMuseDiff: Bool = false
     @State private var pendingMuseJSON: String = ""
@@ -778,6 +783,39 @@ struct SettingsView: View {
                         Button(String(localized: "hooks.confirm-write")) { confirmCopilotOp() }
                             .buttonStyle(.borderedProminent)
                         Button(String(localized: "Cancel")) { showCopilotDiff = false; pendingCopilotJSON = "" }
+                            .buttonStyle(.bordered)
+                    }
+                }
+            }
+            .padding(6)
+        }
+
+        GroupBox(String(localized: "hooks.grok.title")) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(grokHooksInstalled
+                     ? String(localized: "hooks.grok.installed")
+                     : "~/.grok/hooks/coucou.json")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary)
+                HStack(spacing: 10) {
+                    Button(String(localized: "hooks.install")) { triggerGrokPreview(install: true) }
+                        .buttonStyle(.borderedProminent)
+                    Button(String(localized: "hooks.uninstall")) { triggerGrokPreview(install: false) }
+                        .buttonStyle(.bordered)
+                }
+                if showGrokDiff {
+                    ScrollView {
+                        Text(pendingGrokJSON)
+                            .font(.system(size: 10, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(height: 140)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(6)
+                    HStack {
+                        Button(String(localized: "hooks.confirm-write")) { confirmGrokOp() }
+                            .buttonStyle(.borderedProminent)
+                        Button(String(localized: "Cancel")) { showGrokDiff = false; pendingGrokJSON = "" }
                             .buttonStyle(.bordered)
                     }
                 }
@@ -1891,6 +1929,33 @@ struct SettingsView: View {
         }
     }
 
+    private func triggerGrokPreview(install: Bool) {
+        do {
+            grokPendingInstall = install
+            pendingGrokJSON = try HookServer.shared.previewGrokHooks(install: install)
+            showGrokDiff = true
+            statusMessage = String(localized: "hooks.review-json")
+        } catch let e as NSError where e.domain == "CoucouNoop" {
+            statusMessage = e.localizedDescription
+        } catch {
+            statusMessage = "❌ \(error.localizedDescription)"
+        }
+    }
+
+    private func confirmGrokOp() {
+        do {
+            try HookServer.shared.writeGrokHooks()
+            showGrokDiff = false
+            pendingGrokJSON = ""
+            grokHooksInstalled = grokPendingInstall
+            statusMessage = grokPendingInstall
+                ? String(localized: "status.grok-hooks-installed")
+                : String(localized: "status.grok-hooks-removed")
+        } catch {
+            statusMessage = "❌ \(error.localizedDescription)"
+        }
+    }
+
     private func triggerMusePreview(install: Bool) {
         do {
             musePendingInstall = install
@@ -2197,6 +2262,7 @@ struct SettingsView: View {
             if def.id == "agent_muse"          && !HookServer.museHooksInstalled()       { return String(localized: "Hooks not installed") }
             if def.id == "agent_opencode"      && !HookServer.openCodePluginInstalled()  { return String(localized: "Plugin not installed") }
             if def.id == "agent_amp"           && !HookServer.ampPluginInstalled()       { return String(localized: "Plugin not installed") }
+            if def.id == "agent_grok"          && !HookServer.grokHooksInstalled()       { return String(localized: "Hooks not installed") }
             if def.id == SpotifyController.pillId && !SpotifyController.shared.isInstalled { return String(localized: "Not installed") }
             #endif
             if def.category == .ai {

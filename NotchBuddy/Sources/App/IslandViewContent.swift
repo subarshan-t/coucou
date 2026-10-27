@@ -61,8 +61,16 @@ struct OverviewView: View {
     @ObservedObject var state: AppState
     @State private var showingN8nDetail = false
     @State private var activeDiffId: Int? = nil
+    @State private var showingSessionList = false
 
     var agent: AgentTask? { state.focusTask }
+
+    /// Sessions of a pill that lists them (Grok Build), nil for every other pill.
+    private var sessionRows: [AgentSessionBoard.Row]? {
+        guard let id = agent?.id, HookServer.listedPills.contains(id),
+              let rows = state.agentSessionRows[id], !rows.isEmpty else { return nil }
+        return rows
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -88,17 +96,35 @@ struct OverviewView: View {
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                                     .layoutPriority(1)
-                                Text({ () -> String in
-                                    switch agent.source {
-                                    case .claudeCode: return "Claude Code"
-                                    case .agent:      return "Agent"
-                                    case .n8n:        return "n8n"
+                                if let rows = sessionRows {
+                                    Button(action: {
+                                        withAnimation(.easeIn(duration: 0.16)) { showingSessionList = true }
+                                    }) {
+                                        HStack(spacing: 3) {
+                                            Text(AgentSessionListView.summary(rows))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(Color(hex: "#8E939C"))
+                                                .lineLimit(1)
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 8, weight: .semibold))
+                                                .foregroundColor(Color(hex: "#6B7079"))
+                                        }
+                                        .contentShape(Rectangle())
                                     }
-                                }())
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Color(hex: "#8E939C"))
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
+                                    .buttonStyle(.plain)
+                                } else {
+                                    Text({ () -> String in
+                                        switch agent.source {
+                                        case .claudeCode: return "Claude Code"
+                                        case .agent:      return "Agent"
+                                        case .n8n:        return "n8n"
+                                        }
+                                    }())
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Color(hex: "#8E939C"))
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                }
                                 Spacer(minLength: 2)
                                 if agent.steps.count > 1 {
                                     Text("\(min(agent.stepIndex + 1, agent.steps.count))/\(agent.steps.count)")
@@ -160,11 +186,23 @@ struct OverviewView: View {
                         .transition(.opacity)
                 }
 
+                // Session list (Grok Build): every agent behind the pill, one row each
+                if showingSessionList, activeDiffId == nil, let task = agent, let rows = sessionRows {
+                    CardBackground(wash: nil)
+                    AgentSessionListView(name: task.name, color: task.color, rows: rows,
+                                         onClose: {
+                                             withAnimation(.easeIn(duration: 0.16)) { showingSessionList = false }
+                                         })
+                        .transition(.opacity)
+                }
+
                 // ↗ jump button — last in ZStack so it renders on top; hidden while any detail is open
                 #if !APPSTORE
                 let hideJumpButton = showingN8nDetail || state.showingPlanDetail || activeDiffId != nil
+                    || (showingSessionList && sessionRows != nil)
                 #else
                 let hideJumpButton = showingN8nDetail || activeDiffId != nil
+                    || (showingSessionList && sessionRows != nil)
                 #endif
                 if !hideJumpButton {
                     Button(action: { openAgentTarget(agent) }) {
@@ -191,6 +229,7 @@ struct OverviewView: View {
         .onChange(of: state.focusId) { _, new in
             showingN8nDetail = false
             activeDiffId = nil
+            showingSessionList = false
             #if !APPSTORE
             withAnimation(.easeIn(duration: 0.16)) { state.showingPlanDetail = false }
             #endif
@@ -205,6 +244,7 @@ struct OverviewView: View {
             #if !APPSTORE
             if m != .expanded { state.showingPlanDetail = false; activeDiffId = nil }
             #endif
+            if m != .expanded { showingSessionList = false }
             if m == .expanded && state.focusId == "integration_github" {
                 GithubPoller.shared.refreshIfStale()
             }
@@ -282,7 +322,8 @@ struct OverviewView: View {
         case "agent_claude-desktop":
             openClaudeDesktopApp()
         case "agent_gemini", "agent_antigravity",
-             "agent_copilot", "agent_muse", "agent_opencode", "agent_amp":
+             "agent_copilot", "agent_muse", "agent_opencode", "agent_amp",
+             "agent_grok":
             #if !APPSTORE
             TerminalTarget.activate(sessionBundleId: nil)
             #endif
@@ -1944,6 +1985,12 @@ struct IntegrationCardView: View {
             #else
             return false
             #endif
+        case "agent_grok":
+            #if !APPSTORE
+            return HookServer.grokHooksInstalled()
+            #else
+            return false
+            #endif
         case "agent_hermes":
             #if !APPSTORE
             return HookServer.hermesPluginInstalled()
@@ -2133,6 +2180,7 @@ struct IntegrationCardView: View {
                    || task.id == "agent_codex"        || task.id == "agent_copilot"
                    || task.id == "agent_muse"         || task.id == "agent_opencode"
                    || task.id == "agent_amp"          || task.id == "agent_hermes"
+                   || task.id == "agent_grok"
         let isAI    = ChatProvider(pillID: task.id) != nil
         if isConfigured {
             if isHooks { return String(localized: "Hooks installed") }
@@ -2559,6 +2607,105 @@ struct VercelDeploymentListView: View {
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(.top, 4)
+    }
+}
+
+// MARK: - Agent Session List View
+
+/// Every session behind a pill that many agents share (Grok Build): who is
+/// working, on what, for how long. Opened from the pill card's subtitle.
+struct AgentSessionListView: View {
+    let name: String
+    let color: String
+    let rows: [AgentSessionBoard.Row]
+    let onClose: () -> Void
+
+    static func summary(_ rows: [AgentSessionBoard.Row]) -> String {
+        let active = rows.filter { $0.status.isActive }.count
+        return String(format: String(localized: "sessions.working %lld %lld"),
+                      Int64(active), Int64(rows.count))
+    }
+
+    private static func accent(_ status: AgentSessionBoard.Status) -> String {
+        switch status {
+        case .thinking: return "#38BDF8"
+        case .working:  return "#22C55E"
+        case .error:    return "#F4505E"
+        case .finished: return "#6B7079"
+        case .idle:     return "#4B5058"
+        }
+    }
+
+    private static func elapsed(_ row: AgentSessionBoard.Row, now: Date) -> String {
+        let diff = max(0, now.timeIntervalSince(row.status.isActive ? row.started : row.updated))
+        if diff < 60    { return "\(Int(diff))s" }
+        if diff < 3600  { return "\(Int(diff / 60))m" }
+        return "\(Int(diff / 3600))h"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Button(action: onClose) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(hex: "#6B7079"))
+                        .frame(width: 18, height: 18)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Circle()
+                    .fill(Color(hex: color))
+                    .frame(width: 7, height: 7)
+                Text(name)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color(hex: "#F5F6F8"))
+                    .lineLimit(1)
+                Text(Self.summary(rows))
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(hex: "#8E939C"))
+                    .lineLimit(1)
+            }
+            .padding(.top, 4)
+
+            // Redrawn every few seconds while shown, never while the island is hidden.
+            TimelineView(.periodic(from: .now, by: 5)) { context in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(rows) { row in
+                            let accent = Color(hex: Self.accent(row.status))
+                            HStack(spacing: 5) {
+                                Circle().fill(accent).frame(width: 5, height: 5)
+                                Text(row.label)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(Color(hex: row.status.isActive ? "#C5C8CD" : "#9398A1"))
+                                    .lineLimit(1).truncationMode(.tail)
+                                    .layoutPriority(1)
+                                Text(row.step)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(Color(hex: "#6B7079"))
+                                    .lineLimit(1).truncationMode(.tail)
+                                Spacer(minLength: 2)
+                                Text(Self.elapsed(row, now: context.date))
+                                    .font(.system(size: 10))
+                                    .foregroundColor(Color(hex: "#6B7079"))
+                                    .fixedSize()
+                            }
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(row.status.isActive ? accent.opacity(0.08) : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.top, 4)
+        .padding(.leading, 108)
+        .padding(.trailing, 12)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .contentShape(Rectangle())
     }
 }
 

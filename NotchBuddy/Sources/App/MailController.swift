@@ -81,7 +81,7 @@ final class MailController: ObservableObject {
     private var timer: Timer?
     private var fetching = false
     private var lastFetch: Date = .distantPast
-    private let queue = DispatchQueue(label: "fr.louisraille.coucou.mail")
+    private let queue = DispatchQueue(label: "au.com.purplegiraffe.giraffy.mail")
 
     private var isPillActive: Bool {
         AppState.shared.activeIntegrations.contains(Self.pillId)

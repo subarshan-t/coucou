@@ -96,6 +96,7 @@ struct SettingsView: View {
     @State private var deepseekKey: String = KeychainStore.shared.get("deepseek-api-key") ?? ""
     @State private var qwenKey: String     = KeychainStore.shared.get("qwen-api-key") ?? ""
     @State private var moonshotKey: String = KeychainStore.shared.get("moonshot-api-key") ?? ""
+    @State private var openrouterKey: String = KeychainStore.shared.get("openrouter-api-key") ?? ""
     @State private var ollamaURL:    String = AppState.shared.ollamaServerURL
     @State private var lmstudioURL:  String = AppState.shared.lmstudioServerURL
     @State private var connectingOllama:    Bool = false
@@ -444,7 +445,7 @@ struct SettingsView: View {
         }
 
         #if !APPSTORE
-        UpdateSettingsSection()
+        if MacUpdater.isEnabled { UpdateSettingsSection() }
         #endif
 
         GroupBox(String(localized: "Weekly recap")) {
@@ -506,6 +507,23 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
+            .padding(6)
+        }
+
+        GroupBox(String(localized: "settings.about")) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(verbatim: "Giraffy \(appVersion) · Purple Giraffe")
+                    .font(.system(size: 12, weight: .medium))
+                // MIT licence credit to the upstream project; keep it.
+                Text(verbatim: "Based on Coucou by Louis Raillé (MIT).")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Text(verbatim: "Support: TODO_PG_SUPPORT_URL")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(6)
         }
 
@@ -606,7 +624,7 @@ struct SettingsView: View {
                     #endif
                 }
                 #if APPSTORE
-                Text("~/.claude/coucou/nb-hook")
+                Text("~/.claude/giraffy/nb-hook")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {
@@ -761,7 +779,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(copilotHooksInstalled
                      ? String(localized: "hooks.copilot.installed")
-                     : "~/.copilot/hooks/coucou.json")
+                     : "~/.copilot/hooks/giraffy.json")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {
@@ -860,7 +878,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(openCodePluginInstalled
                      ? String(localized: "plugin.opencode.installed")
-                     : "~/.config/opencode/plugins/coucou.js")
+                     : "~/.config/opencode/plugins/giraffy.js")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {
@@ -893,7 +911,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(ampPluginInstalled
                      ? String(localized: "plugin.amp.installed")
-                     : "~/.config/amp/plugins/coucou.ts")
+                     : "~/.config/amp/plugins/giraffy.ts")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 HStack(spacing: 10) {
@@ -1190,6 +1208,24 @@ struct SettingsView: View {
                     statusMessage = String(localized: "status.moonshot-key-saved")
                 }
                 .buttonStyle(.borderedProminent)
+
+                Divider()
+
+                HStack(spacing: 8) {
+                    Circle().fill(Color(hex: "#6467F2")).frame(width: 8, height: 8)
+                    Text(verbatim: "OpenRouter").font(.system(size: 12, weight: .semibold))
+                }
+                SecureField("API key", text: $openrouterKey)
+                    .textFieldStyle(.roundedBorder)
+                Text(String(localized: "chat.openrouter.hint"))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(String(localized: "Save")) {
+                    KeychainStore.shared.set("openrouter-api-key", value: openrouterKey)
+                    statusMessage = String(localized: "status.openrouter-key-saved")
+                }
+                .buttonStyle(.borderedProminent)
             }
             .padding(.vertical, 4)
         }
@@ -1278,35 +1314,37 @@ struct SettingsView: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 14) {
 
-                // Resend
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: "#22C55E")).frame(width: 8, height: 8)
-                        Text("Resend").font(.system(size: 12, weight: .semibold))
+                if GiraffyFeatures.removedIntegrations {
+                    // Resend
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Circle().fill(Color(hex: "#22C55E")).frame(width: 8, height: 8)
+                            Text("Resend").font(.system(size: 12, weight: .semibold))
+                        }
+                        SecureField("API key  (re_…)", text: $resendKey)
+                            .textFieldStyle(.roundedBorder)
+                        TextField("From address  (you@yourdomain.com)", text: $resendFrom)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    SecureField("API key  (re_…)", text: $resendKey)
-                        .textFieldStyle(.roundedBorder)
-                    TextField("From address  (you@yourdomain.com)", text: $resendFrom)
-                        .textFieldStyle(.roundedBorder)
-                }
 
-                // n8n
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: "#F29B38")).frame(width: 8, height: 8)
-                        Text("n8n").font(.system(size: 12, weight: .semibold))
+                    // n8n
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Circle().fill(Color(hex: "#F29B38")).frame(width: 8, height: 8)
+                            Text("n8n").font(.system(size: 12, weight: .semibold))
+                        }
+                        TextField("Instance URL  (https://…)", text: $n8nUrl)
+                            .textFieldStyle(.roundedBorder)
+                        SecureField("API key", text: $n8nKey)
+                            .textFieldStyle(.roundedBorder)
+                        IntegrationFilterRow(
+                            label: String(localized: "integrations.workflows"),
+                            items: n8nWorkflows,
+                            filter: $state.n8nWorkflowFilter,
+                            loading: loadingN8n,
+                            onLoad: loadN8nWorkflows
+                        )
                     }
-                    TextField("Instance URL  (https://…)", text: $n8nUrl)
-                        .textFieldStyle(.roundedBorder)
-                    SecureField("API key", text: $n8nKey)
-                        .textFieldStyle(.roundedBorder)
-                    IntegrationFilterRow(
-                        label: String(localized: "integrations.workflows"),
-                        items: n8nWorkflows,
-                        filter: $state.n8nWorkflowFilter,
-                        loading: loadingN8n,
-                        onLoad: loadN8nWorkflows
-                    )
                 }
 
                 // Vercel
@@ -1339,84 +1377,86 @@ struct SettingsView: View {
                         .foregroundColor(Color(hex: "#8E939C"))
                 }
 
-                // Stripe
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: "#0570DE")).frame(width: 8, height: 8)
-                        Text("Stripe").font(.system(size: 12, weight: .semibold))
-                    }
-                    SecureField("Secret key  (sk_live_… or sk_test_…)", text: $stripeKey)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                // Cal.com
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: "#C9956A")).frame(width: 8, height: 8)
-                        Text("Cal.com").font(.system(size: 12, weight: .semibold))
-                    }
-                    SecureField("API key  (cal_live_…)", text: $calcomKey)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                // Notion
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: "#E8E8E8")).frame(width: 8, height: 8)
-                        Text("Notion").font(.system(size: 12, weight: .semibold))
-                    }
-                    SecureField("Integration token  (secret_…)", text: $notionKey)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                // Crypto: public prices, no key. Changes apply at once.
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Color(hex: "#F7931A")).frame(width: 8, height: 8)
-                        Text(verbatim: "Crypto").font(.system(size: 12, weight: .semibold))
-                    }
-                    Picker(String(localized: "crypto.exchange"), selection: $cryptoExchange) {
-                        ForEach(CryptoExchange.allCases, id: \.rawValue) { ex in
-                            Text(verbatim: ex.name).tag(ex.rawValue)
+                if GiraffyFeatures.removedIntegrations {
+                    // Stripe
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Circle().fill(Color(hex: "#0570DE")).frame(width: 8, height: 8)
+                            Text("Stripe").font(.system(size: 12, weight: .semibold))
                         }
+                        SecureField("Secret key  (sk_live_… or sk_test_…)", text: $stripeKey)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    .pickerStyle(.segmented)
-                    Picker(String(localized: "crypto.currency"), selection: $cryptoCurrency) {
-                        Text(verbatim: "EUR €").tag("EUR")
-                        Text(verbatim: "USD $").tag("USD")
-                    }
-                    .pickerStyle(.segmented)
-                    TextField(String(localized: "crypto.coins-placeholder"), text: $cryptoCoins)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { CryptoController.shared.settingsChanged() }
-                    HStack(spacing: 8) {
-                        Toggle(String(format: String(localized: "crypto.alert %lld"), Int64(cryptoAlertPercent)),
-                               isOn: $cryptoAlert)
-                        if cryptoAlert {
-                            Stepper("", value: $cryptoAlertPercent, in: 1...50, step: 1)
-                                .labelsHidden()
+
+                    // Cal.com
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Circle().fill(Color(hex: "#C9956A")).frame(width: 8, height: 8)
+                            Text("Cal.com").font(.system(size: 12, weight: .semibold))
                         }
+                        SecureField("API key  (cal_live_…)", text: $calcomKey)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    Text(String(localized: "crypto.hint"))
-                        .font(.system(size: 10))
-                        .foregroundColor(Color(hex: "#8E939C"))
+
+                    // Notion
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Circle().fill(Color(hex: "#E8E8E8")).frame(width: 8, height: 8)
+                            Text("Notion").font(.system(size: 12, weight: .semibold))
+                        }
+                        SecureField("Integration token  (secret_…)", text: $notionKey)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    // Crypto: public prices, no key. Changes apply at once.
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Circle().fill(Color(hex: "#F7931A")).frame(width: 8, height: 8)
+                            Text(verbatim: "Crypto").font(.system(size: 12, weight: .semibold))
+                        }
+                        Picker(String(localized: "crypto.exchange"), selection: $cryptoExchange) {
+                            ForEach(CryptoExchange.allCases, id: \.rawValue) { ex in
+                                Text(verbatim: ex.name).tag(ex.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        Picker(String(localized: "crypto.currency"), selection: $cryptoCurrency) {
+                            Text(verbatim: "EUR €").tag("EUR")
+                            Text(verbatim: "USD $").tag("USD")
+                        }
+                        .pickerStyle(.segmented)
+                        TextField(String(localized: "crypto.coins-placeholder"), text: $cryptoCoins)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit { CryptoController.shared.settingsChanged() }
+                        HStack(spacing: 8) {
+                            Toggle(String(format: String(localized: "crypto.alert %lld"), Int64(cryptoAlertPercent)),
+                                   isOn: $cryptoAlert)
+                            if cryptoAlert {
+                                Stepper("", value: $cryptoAlertPercent, in: 1...50, step: 1)
+                                    .labelsHidden()
+                            }
+                        }
+                        Text(String(localized: "crypto.hint"))
+                            .font(.system(size: 10))
+                            .foregroundColor(Color(hex: "#8E939C"))
+                    }
+                    .onChange(of: cryptoExchange) { _, _ in CryptoController.shared.settingsChanged() }
+                    .onChange(of: cryptoCurrency) { _, _ in CryptoController.shared.settingsChanged() }
+
+                    // Portfolio: exchange accounts + wallets.
+                    PortfolioSettingsSection()
+                        .padding(.top, 4)
+
+                    #if !APPSTORE
+                    // WhatsApp through a local gateway: its own fields, saved by its own button.
+                    WhatsAppSettingsSection()
+                        .padding(.top, 4)
+                    #endif
                 }
-                .onChange(of: cryptoExchange) { _, _ in CryptoController.shared.settingsChanged() }
-                .onChange(of: cryptoCurrency) { _, _ in CryptoController.shared.settingsChanged() }
-
-                // Portfolio: exchange accounts + wallets.
-                PortfolioSettingsSection()
-                    .padding(.top, 4)
-
-                #if !APPSTORE
-                // WhatsApp through a local gateway: its own fields, saved by its own button.
-                WhatsAppSettingsSection()
-                    .padding(.top, 4)
-                #endif
 
                 Button(String(localized: "integrations.save")) {
                     saveIntegrations()
-                    CryptoController.shared.settingsChanged()
+                    if GiraffyFeatures.removedIntegrations { CryptoController.shared.settingsChanged() }
                 }
                     .buttonStyle(.borderedProminent)
             }
@@ -1441,8 +1481,8 @@ struct SettingsView: View {
 
     private func speakVoiceSample() {
         let en = voiceLanguage != "fr"
-        VoiceSpeaker.shared.speak(en ? "Hi, I'm Coucou. Say OK Coucou whenever you need me."
-                                     : "Salut, c'est Coucou. Dis OK Coucou quand tu as besoin de moi.",
+        VoiceSpeaker.shared.speak(en ? "Hi, I'm Giraffy. I keep an eye on your agents."
+                                     : "Salut, c'est Giraffy. Je garde un œil sur tes agents.",
                                   locale: Locale(identifier: en ? "en-US" : "fr-FR"))
     }
 
@@ -1452,59 +1492,62 @@ struct SettingsView: View {
 
         // Claude is Coucou's brain: no model, language or feature switches any more,
         // only the wake word, the Anthropic key it needs, and Coucou's voice.
-        GroupBox(String(localized: "«\u{202F}OK Coucou\u{202F}» — voice wake word")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Toggle(String(localized: "Enable voice command"), isOn: $voiceEngine.isEnabled)
-                    .disabled(!voicePermissionsGranted && !voiceEngine.isEnabled)
+        // The wake word is off until Giraffy has its own phrase (GiraffyFeatures).
+        if GiraffyFeatures.wakeWord {
+            GroupBox(String(localized: "«\u{202F}OK Coucou\u{202F}» — voice wake word")) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle(String(localized: "Enable voice command"), isOn: $voiceEngine.isEnabled)
+                        .disabled(!voicePermissionsGranted && !voiceEngine.isEnabled)
 
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: webKeySaved ? "checkmark.circle.fill" : "exclamationmark.circle")
-                        .foregroundColor(webKeySaved ? .green : .orange)
-                    Text(webKeySaved ? String(localized: "voice.setting-web-desc")
-                                     : String(localized: "voice.setting-web-nokey"))
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .onAppear { webKeySaved = !(KeychainStore.shared.get("anthropic-api-key") ?? "").isEmpty }
-
-                if voiceEngine.recognizerUnavailable {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
-                        Text("No speech recognition model available on this device. Install one in System Settings \u{2192} Keyboard \u{2192} Dictation.")
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: webKeySaved ? "checkmark.circle.fill" : "exclamationmark.circle")
+                            .foregroundColor(webKeySaved ? .green : .orange)
+                        Text(webKeySaved ? String(localized: "voice.setting-web-desc")
+                                         : String(localized: "voice.setting-web-nokey"))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                }
+                    .onAppear { webKeySaved = !(KeychainStore.shared.get("anthropic-api-key") ?? "").isEmpty }
 
-                if let err = voiceEngine.audioError {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
-                        Text("\(String(localized: "Microphone unavailable")): \(err)")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                if !voicePermissionsGranted {
-                    Button(String(localized: "Request permissions")) {
-                        Task {
-                            let ok = await VoiceSettings.requestPermissions()
-                            voicePermissionsGranted = ok
+                    if voiceEngine.recognizerUnavailable {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text("No speech recognition model available on this device. Install one in System Settings \u{2192} Keyboard \u{2192} Dictation.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+
+                    if let err = voiceEngine.audioError {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                            Text("\(String(localized: "Microphone unavailable")): \(err)")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    if !voicePermissionsGranted {
+                        Button(String(localized: "Request permissions")) {
+                            Task {
+                                let ok = await VoiceSettings.requestPermissions()
+                                voicePermissionsGranted = ok
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
                 }
+                .padding(6)
             }
-            .padding(6)
-        }
-        .onAppear {
-            voicePermissionsGranted = VoiceSettings.micStatus == .granted
-                && VoiceSettings.speechStatus == .granted
+            .onAppear {
+                voicePermissionsGranted = VoiceSettings.micStatus == .granted
+                    && VoiceSettings.speechStatus == .granted
+            }
         }
 
         GroupBox(String(localized: "Language")) {

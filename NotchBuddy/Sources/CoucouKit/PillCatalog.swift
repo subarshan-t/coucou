@@ -140,9 +140,9 @@ enum PillCatalog {
     /// Pills available in the current build target.
     static var available: [PillDefinition] {
         #if APPSTORE
-        all.filter { !$0.githubOnly }
+        all.filter { !$0.githubOnly && !GiraffyFeatures.removedPillIds.contains($0.id) }
         #else
-        all
+        all.filter { !GiraffyFeatures.removedPillIds.contains($0.id) }
         #endif
     }
 

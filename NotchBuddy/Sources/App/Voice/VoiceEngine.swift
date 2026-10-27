@@ -24,8 +24,12 @@ final class VoiceEngine: ObservableObject {
 
     // MARK: - Published state
 
-    @Published var isEnabled: Bool = VoiceSettings.isEnabled {
-        didSet { VoiceSettings.isEnabled = isEnabled; handleEnabledChanged() }
+    @Published var isEnabled: Bool = GiraffyFeatures.wakeWord && VoiceSettings.isEnabled {
+        didSet {
+            // The wake word is off in Giraffy until it has its own phrase (GiraffyFeatures).
+            if isEnabled && !GiraffyFeatures.wakeWord { isEnabled = false; return }
+            VoiceSettings.isEnabled = isEnabled; handleEnabledChanged()
+        }
     }
     @Published private(set) var isListeningForCommand: Bool = false
     @Published private(set) var commandTranscript: String = ""
@@ -614,7 +618,7 @@ final class VoiceEngine: ObservableObject {
             // Logged once per turn (no words): helps when an answer seems unheard.
             if !loggedDropWhileSpeaking {
                 loggedDropWhileSpeaking = true
-                appendAppLog("nb.log", "[Voice] words heard while Coucou was speaking: ignored")
+                appendAppLog("nb.log", "[Voice] words heard while Giraffy was speaking: ignored")
             }
             return
         }

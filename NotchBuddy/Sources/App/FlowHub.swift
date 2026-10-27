@@ -6,12 +6,12 @@ import SwiftUI
 /// The pages of the Coucou window: Flow (the dictation, the Notetaker) and the notch's settings.
 enum HubPage: String, CaseIterable, Identifiable {
     case dictation, notes, insights, dictionary, snippets, styles, settings
-    case general, pills, agents, chat, integrations, voice, shortcuts
+    case general, pills, agents, approvals, usage, chat, integrations, voice, shortcuts
 
     var id: String { rawValue }
 
     static let flowPages: [HubPage] = [.dictation, .notes, .insights, .dictionary, .snippets, .styles, .settings]
-    static let notchPages: [HubPage] = [.general, .pills, .agents, .chat, .integrations, .voice, .shortcuts]
+    static let notchPages: [HubPage] = [.general, .pills, .agents, .approvals, .usage, .chat, .integrations, .voice, .shortcuts]
 
     /// The section of Settings this page shows, for the notch's pages.
     var settingsSection: String? {
@@ -37,6 +37,8 @@ enum HubPage: String, CaseIterable, Identifiable {
         case .general:      return String(localized: "General")
         case .pills:        return String(localized: "Active pills")
         case .agents:       return String(localized: "Agents")
+        case .approvals:    return String(localized: "audit.page.title")
+        case .usage:        return String(localized: "usage.page.title")
         case .chat:         return String(localized: "Chat")
         case .integrations: return String(localized: "Integrations")
         case .voice:        return String(localized: "Voice")
@@ -63,6 +65,8 @@ enum HubPage: String, CaseIterable, Identifiable {
         case .general:      return "gearshape"
         case .pills:        return "square.grid.2x2"
         case .agents:       return "terminal"
+        case .approvals:    return "checkmark.shield"
+        case .usage:        return "gauge.with.dots.needle.33percent"
         case .chat:         return "bubble.left.and.bubble.right"
         case .integrations: return "puzzlepiece.extension"
         case .voice:        return "waveform"
@@ -71,7 +75,7 @@ enum HubPage: String, CaseIterable, Identifiable {
     }
 }
 
-/// The colors of the Coucou Flow window: the island's dark, with Coucou's orange.
+/// The colors of the Flow window: the island's dark, with Giraffy's purple accent (GiraffyTheme).
 enum HubTheme {
     /// OLED black: the window and the sidebar.
     static let window = Color.black
@@ -85,8 +89,8 @@ enum HubTheme {
     static let body = Color(hex: "#E1E3E6")
     static let secondary = Color(hex: "#8E939C")
     static let muted = Color(hex: "#6B7079")
-    static let accent = Color(hex: "#FB923C")
-    static let onAccent = Color(hex: "#170C04")
+    static let accent = GiraffyTheme.accent
+    static let onAccent = GiraffyTheme.onAccent
     static let green = Color(hex: "#34D399")
     static let red = Color(hex: "#FF453A")
     /// One color per person in a call: you first, then the others.
@@ -177,7 +181,7 @@ final class FlowHubController {
         let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 720),
                            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                            backing: .buffered, defer: false)
-        win.title = "Coucou"
+        win.title = "Giraffy"
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
         win.appearance = NSAppearance(named: .darkAqua)
@@ -231,6 +235,8 @@ struct FlowHubView: View {
         case .snippets:   HubSnippetsPage()
         case .styles:     HubStylesPage(router: router)
         case .settings:   HubSettingsPage()
+        case .approvals:  HubApprovalsPage()
+        case .usage:      HubUsagePage()
         default:
             if let section = router.page.settingsSection {
                 VStack(alignment: .leading, spacing: 0) {
@@ -258,7 +264,7 @@ private struct HubSidebar: View {
                 // hops and hats): lifted so his body lines up with the name.
                 HubLiveMochi(size: 28)
                     .offset(y: -4)
-                Text(verbatim: "Coucou")
+                Text(verbatim: "Giraffy")
                     .font(.system(size: 18, weight: .bold))
             }
             .padding(.horizontal, 8)

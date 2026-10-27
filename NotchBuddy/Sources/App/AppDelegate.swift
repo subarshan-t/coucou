@@ -105,9 +105,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupMenuBarItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         guard let button = statusItem?.button else { return }
-        button.image = NSImage(named: "MenuBarIcon") ?? NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "Coucou")
+        button.image = NSImage(named: "MenuBarIcon") ?? NSImage(systemSymbolName: "circle.fill", accessibilityDescription: "Giraffy")
         button.image?.size = NSSize(width: 24, height: 18)
-        button.image?.accessibilityDescription = "Coucou"
+        button.image?.accessibilityDescription = "Giraffy"
         button.image?.isTemplate = true
 
         let menu = NSMenu()
@@ -278,17 +278,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         islandController?.showWindow(nil)
         islandController?.fsm.launch()
         HookServer.shared.start()
+        ApprovalAuditLog.shared.prune()   // drop entries past the retention setting
         #if !APPSTORE
         _ = VoiceEngine.shared  // registers system observers; starts mic only if the user enabled voice
         FlowDictation.shared.start()  // watches the dictation key only if Flow dictation is on
         #endif
-        N8nPoller.shared.start()
         VercelPoller.shared.start()
-        ResendPoller.shared.start()
         GithubPoller.shared.start()
-        StripePoller.shared.start()
-        CalcomPoller.shared.start()
-        NotionPoller.shared.start()
+        // n8n, Resend, Stripe, Cal.com and Notion are not part of Giraffy (GiraffyFeatures).
+        if GiraffyFeatures.removedIntegrations {
+            N8nPoller.shared.start()
+            ResendPoller.shared.start()
+            StripePoller.shared.start()
+            CalcomPoller.shared.start()
+            NotionPoller.shared.start()
+        }
         NotificationCenter.default.addObserver(self, selector: #selector(openSettingsFromNotification(_:)),
                                                name: .openFullSettings, object: nil)
         // After the greeting ends, fly Mochi back to the desktop if it was there at last quit
@@ -305,15 +309,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.checkMondayRecap()
         }
         #if !APPSTORE
-        _ = MusicController.shared
-        _ = SpotifyController.shared
         MailController.shared.start()
-        WhatsAppController.shared.start()
         MacUpdater.shared.start()
         ClaudeDesktopChatWatcher.shared.start()
         #endif
-        CryptoController.shared.start()
-        PortfolioController.shared.start()
+        // Music, Spotify, WhatsApp, crypto and portfolio are not part of Giraffy (GiraffyFeatures).
+        if GiraffyFeatures.removedIntegrations {
+            #if !APPSTORE
+            _ = MusicController.shared
+            _ = SpotifyController.shared
+            WhatsAppController.shared.start()
+            #endif
+            CryptoController.shared.start()
+            PortfolioController.shared.start()
+        }
     }
 }
 

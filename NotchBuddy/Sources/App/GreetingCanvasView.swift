@@ -324,86 +324,6 @@ private func gRR(_ ctx: CGContext, _ x: CGFloat, _ y: CGFloat,
     ctx.closePath()
 }
 
-private func mochiPath(hw: CGFloat, hh: CGFloat) -> CGPath {
-    let n: CGFloat = 3.2
-    let path = CGMutablePath()
-    let steps = 96
-    for i in 0...steps {
-        let a = CGFloat(i)/CGFloat(steps)*2 * .pi
-        let ca = cos(a), sa = sin(a)
-        let px = hw * (ca < 0 ? -1 : 1) * pow(abs(ca), 2/n)
-        let py = hh * (sa < 0 ? -1 : 1) * pow(abs(sa), 2/n)
-        if i == 0 { path.move(to: CGPoint(x: px, y: py)) }
-        else { path.addLine(to: CGPoint(x: px, y: py)) }
-    }
-    path.closeSubpath(); return path
-}
-
-private func whiteFill(_ ctx: CGContext, _ path: CGPath,
-                       x0: CGFloat, y0: CGFloat, x1: CGFloat, y1: CGFloat) {
-    let cs = CGColorSpaceCreateDeviceRGB()
-    let c0 = CGColor(red: 251/255, green: 251/255, blue: 252/255, alpha: 1)
-    let c1 = CGColor(red: 231/255, green: 233/255, blue: 236/255, alpha: 1)
-    guard let g = CGGradient(colorsSpace: cs, colors: [c0,c1] as CFArray, locations: [0,1]) else { return }
-    ctx.saveGState()
-    ctx.addPath(path); ctx.clip()
-    ctx.drawLinearGradient(g, start: CGPoint(x: x0, y: y0),
-                              end:   CGPoint(x: x1, y: y1),
-                              options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-    ctx.restoreGState()
-}
-
-// Left hand: ball, waves (bobs vertically)
-private func drawHandL(_ ctx: CGContext, hw: CGFloat, hh: CGFloat, p: GreetPose) {
-    let k = CGFloat(p.handL); guard k > 0.01 else { return }
-    let hb = hh * 2
-    let r  = hb * 0.15 * k
-    let rx = gLerpF(-hw * 0.35, -hw - hb * 0.22, k)
-    let ry0 = gLerpF(hh * 0.85, hh * 0.62, k)
-    var ry = Double(ry0)
-    if p.wave >= 0 {
-        let w = p.wave
-        // Ramp in 0.08 s after pop1; ramp out over tuck0→tuck1
-        let rampIn  = gClamp(w / 0.08, 0, 1)
-        let waveEnd = GT.tuck0 - GT.pop1   // = 1.00
-        let rampOut = 1 - gClamp((w - waveEnd) / (GT.tuck1 - GT.tuck0), 0, 1)
-        let ramp    = rampIn * rampOut
-        ry += sin(w * 2 * .pi * 5.0) * Double(hb) * 0.14 * ramp
-    }
-    ctx.saveGState()
-    ctx.translateBy(x: rx, y: CGFloat(ry))
-    let circ = CGPath(ellipseIn: CGRect(x: -r, y: -r, width: r*2, height: r*2), transform: nil)
-    whiteFill(ctx, circ, x0: r, y0: -r, x1: -r, y1: r)
-    ctx.addEllipse(in: CGRect(x: -r, y: -r, width: r*2, height: r*2))
-    ctx.setStrokeColor(CGColor(red: 0, green: 0, blue: 0, alpha: 0.08))
-    ctx.setLineWidth(0.8); ctx.strokePath()
-    ctx.restoreGState()
-}
-
-// Right hand: capsule, quasi-static with breathing rotation ±0.04 rad at 2.5 Hz
-private func drawHandR(_ ctx: CGContext, hw: CGFloat, hh: CGFloat, p: GreetPose) {
-    let k = CGFloat(p.handR); guard k > 0.01 else { return }
-    let hb = hh * 2, L = hb * 0.40 * k, T2 = hb * 0.22 * k
-    let rx0 = gLerpF(hw * 0.35, hw + hb * 0.20, k)
-    let ry0 = gLerpF(hh * 0.85, hh * 0.20, k)
-    // Breathing rotation ±0.04 rad at 2.5 Hz, only while wave is active; no displacement
-    let ang: CGFloat = p.wave >= 0
-        ? -0.61 + CGFloat(sin(p.wave * 2 * .pi * 2.5)) * 0.04
-        : -0.61
-    ctx.saveGState()
-    ctx.translateBy(x: rx0, y: ry0)
-    ctx.rotate(by: ang)
-    let cap = CGMutablePath()
-    gRR(ctx, -L/2, -T2/2, L, T2, T2/2)
-    cap.addPath(ctx.path!)
-    ctx.beginPath()
-    whiteFill(ctx, cap, x0: L/2, y0: -T2/2, x1: -L/2, y1: T2/2)
-    gRR(ctx, -L/2, -T2/2, L, T2, T2/2)
-    ctx.setStrokeColor(CGColor(red: 0, green: 0, blue: 0, alpha: 0.08))
-    ctx.setLineWidth(0.8); ctx.strokePath()
-    ctx.restoreGState()
-}
-
 private func drawMochi(_ ctx: CGContext, p: GreetPose) {
     let hh = CGFloat(p.hb/2), hw = hh*GASP; guard hh > 0.4 else { return }
 
@@ -444,55 +364,24 @@ private func drawMochi(_ ctx: CGContext, p: GreetPose) {
     ctx.rotate(by: CGFloat(p.tilt))
     ctx.scaleBy(x: CGFloat(p.sx), y: CGFloat(p.sy))
 
-    drawHandL(ctx, hw: hw, hh: hh, p: p)
-    drawHandR(ctx, hw: hw, hh: hh, p: p)
-
-    let mpath = mochiPath(hw: hw, hh: hh)
-    whiteFill(ctx, mpath, x0: hw*0.6, y0: -hh, x1: -hw*0.6, y1: hh)
-
-    if p.tint > 0 {
-        let cs = CGColorSpaceCreateDeviceRGB()
-        let c0 = CGColor(red: 127/255, green: 180/255, blue: 234/255, alpha: CGFloat(p.tint))
-        let c1 = CGColor(red: 127/255, green: 180/255, blue: 234/255, alpha: 0)
-        if let g = CGGradient(colorsSpace: cs, colors: [c0,c1] as CFArray, locations: [0,1]) {
-            ctx.saveGState()
-            ctx.addPath(mpath); ctx.clip()
-            ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: hh),
-                                      end:   CGPoint(x: 0, y: -hh*0.1), options: [])
-            ctx.restoreGState()
-        }
+    // Giraffy: his head is as tall as Mochi's body was; he rises on his neck, his ears
+    // perk where the hands came out, and the wave is an ear wave.
+    var gp = GiraffyPose()
+    gp.earL = 0.6 * CGFloat(p.handL)
+    gp.earR = 0.6 * CGFloat(p.handR)
+    if p.wave >= 0 { gp.earR += 0.5 * CGFloat(sin(p.wave * 2 * .pi * 2.5)) }
+    gp.look = CGPoint(x: p.lookX, y: p.lookY)
+    gp.eyeOpen = CGFloat(p.open)
+    switch p.eye {
+    case .dot: gp.mouth = .line
+    case .happy: gp.eyeL = .happy; gp.eyeR = .happy; gp.mouth = .smile
+    case .content: gp.eyeL = .closed; gp.eyeR = .closed; gp.mouth = .smile
     }
-
+    gp.blush = CGFloat(p.tint) * 0.6
     ctx.saveGState()
-    ctx.addPath(mpath); ctx.clip()
-    ctx.setFillColor(gHex("#16171A"))
-    ctx.setStrokeColor(gHex("#16171A"))
-    let er = CGFloat(p.hb*0.06)
-    let sp = CGFloat(p.hb*0.19)
-    let lx = CGFloat(p.lookX)*hw*0.42
-    let ly = CGFloat(p.lookY)*hh*0.28 + hh*0.12 + CGFloat(p.eyeRoll)*hh*1.25
-    for sd: CGFloat in [-1, 1] {
-        ctx.saveGState()
-        ctx.translateBy(x: sd*sp+lx, y: ly)
-        if p.eye == .happy {
-            ctx.setLineWidth(er*0.95); ctx.setLineCap(.round)
-            ctx.beginPath()
-            ctx.addArc(center: CGPoint(x: 0, y: er*0.6), radius: er*1.25,
-                       startAngle: .pi*1.15, endAngle: .pi*1.85, clockwise: false)
-            ctx.strokePath()
-        } else if p.eye == .content {
-            ctx.setLineWidth(er*0.95); ctx.setLineCap(.round)
-            ctx.beginPath()
-            ctx.addArc(center: CGPoint(x: 0, y: -er*0.5), radius: er*1.25,
-                       startAngle: .pi*0.15, endAngle: .pi*0.85, clockwise: false)
-            ctx.strokePath()
-        } else {
-            ctx.scaleBy(x: 1, y: max(0.12, CGFloat(p.open)))
-            ctx.addEllipse(in: CGRect(x: -er, y: -er, width: er*2, height: er*2))
-            ctx.fillPath()
-        }
-        ctx.restoreGState()
-    }
+    let gu = hh * 2 / 59
+    ctx.scaleBy(x: gu, y: gu)
+    Giraffy.draw(in: ctx, pose: gp, colors: .pg, neckBase: CGPoint(x: 0, y: 60))
     ctx.restoreGState()
 
     // Activity badge
@@ -500,7 +389,7 @@ private func drawMochi(_ ctx: CGContext, p: GreetPose) {
         let bs = CGFloat(p.badge)
         let br = hh*0.3
         ctx.saveGState()
-        ctx.translateBy(x: -hw*0.78, y: -hh*0.72)
+        ctx.translateBy(x: hw*0.95, y: -hh*1.1)
         ctx.scaleBy(x: bs, y: bs)
         ctx.setFillColor(gHex("#000000"))
         ctx.addEllipse(in: CGRect(x: -(br+hh*0.07), y: -(br+hh*0.07),
@@ -582,7 +471,7 @@ private func drawHeader(_ ctx: CGContext, alpha: Double) {
     ctx.restoreGState()
 }
 
-private let miniColors = ["#E86A6A","#3E86E0","#EFAE5A","#8C73F2"]
+private let miniGiraffyColors = ["#E86A6A","#3E86E0","#EFAE5A","#8C73F2"].map { GiraffyColors.from(hex: $0) }
 
 private func drawMinis(_ ctx: CGContext, alpha: Double, compact: IslandRestingLayout) {
     guard alpha > 0.01 else { return }
@@ -595,8 +484,8 @@ private func drawMinis(_ ctx: CGContext, alpha: Double, compact: IslandRestingLa
         ctx.translateBy(x: cx+dx, y: cy+dy)
         let scale = CGFloat(alpha) * compact.miniGridScale
         ctx.scaleBy(x: scale, y: scale)
-        ctx.setFillColor(gHex(miniColors[i]))
-        ctx.addPath(mochiPath(hw: 5.3, hh: 4)); ctx.fillPath()
+        ctx.scaleBy(x: 9 / 59, y: 9 / 59)
+        Giraffy.draw(in: ctx, pose: GiraffyPose(), colors: miniGiraffyColors[i], neckBase: nil)
         ctx.restoreGState()
     }
 }

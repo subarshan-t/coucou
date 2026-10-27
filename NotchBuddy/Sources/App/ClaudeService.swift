@@ -4,7 +4,7 @@ import Security
 // MARK: - Keychain helpers
 
 enum Keychain {
-    static let service = "fr.louisraille.NotchBuddy"
+    static let service = "au.com.purplegiraffe.Giraffy"
 
     static func save(key: String, value: String) {
         guard let data = value.data(using: .utf8) else { return }
@@ -67,6 +67,7 @@ final class KeychainStore: @unchecked Sendable {
         "deepseek-api-key",
         "qwen-api-key",
         "moonshot-api-key",
+        "openrouter-api-key",
         "resend-api-key", "resend-from",
         "n8n-url", "n8n-api-key",
         "vercel-token",
@@ -202,6 +203,32 @@ final class ClaudeService {
         }
     }
 
+    /// OpenRouter's models, free ones first (a free account can only use those: their ids end
+    /// in ":free" and they cost nothing). Labelled with OpenRouter's own model names.
+    static func fetchOpenRouterModels(apiKey: String) async -> [(id: String, label: String)] {
+        guard let url = URL(string: "https://openrouter.ai/api/v1/models") else { return [] }
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await URLSession.shared.data(for: req),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return [] }
+        return openRouterModels(fromJSON: data)
+    }
+
+    static func openRouterModels(fromJSON data: Data) -> [(id: String, label: String)] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = json["data"] as? [[String: Any]] else { return [] }
+        var free: [(id: String, label: String)] = [], paid: [(id: String, label: String)] = []
+        for item in items {
+            guard let id = item["id"] as? String else { continue }
+            let name = item["name"] as? String ?? id
+            let pricing = item["pricing"] as? [String: Any] ?? [:]
+            let isFree = id.hasSuffix(":free")
+                || ((pricing["prompt"] as? String) == "0" && (pricing["completion"] as? String) == "0")
+            if isFree { free.append((id: id, label: name)) } else { paid.append((id: id, label: name)) }
+        }
+        return free.sorted { $0.label < $1.label } + paid.sorted { $0.label < $1.label }
+    }
+
     /// Chosen in Settings; falls back to the default when the field is left empty.
     private var model: String {
         let m = AppState.shared.claudeModel.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -219,19 +246,24 @@ final class ClaudeService {
 
     /// Resolved once: NSFullUserName() is a system call, and the name cannot change under us
     /// while the app runs.
-    private let systemPrompt = ClaudeService.makeSystemPrompt()
+    private let systemPrompt = ClaudeService.makeSystemPrompt(webSearch: true)
+    /// For the OpenAI-compatible providers, which get no search tool: a model told it can search
+    /// writes out a made-up tool call instead of an answer.
+    private let offlineSystemPrompt = ClaudeService.makeSystemPrompt(webSearch: false)
 
     /// Greets the user by their macOS first name when there is one worth using, and stays
     /// neutral otherwise — same wording as the Windows build.
-    private nonisolated static func makeSystemPrompt() -> String {
+    private nonisolated static func makeSystemPrompt(webSearch: Bool) -> String {
         let opening = if let firstName = resolveUserFirstName() {
-            "You are Mochi, \(firstName)'s personal AI assistant embedded in the notch of their Mac."
+            "You are Giraffy, \(firstName)'s personal AI assistant embedded in the notch of their Mac."
         } else {
-            "You are Mochi, a personal AI assistant embedded in the notch of the user's Mac."
+            "You are Giraffy, a personal AI assistant embedded in the notch of the user's Mac."
         }
+        let reach = webSearch
+            ? "You have web search access and can help with absolutely anything — research, coding, finding places, recommendations, tasks, questions."
+            : "You have no web access and no tools: never write tool or function calls. Answer from what you know; for live information (weather, news, prices) say you can't look it up and suggest where to check."
         return """
-        \(opening) \
-        You have web search access and can help with absolutely anything — research, coding, finding places, recommendations, tasks, questions. \
+        \(opening) \(reach) \
         Respond in the user's language. Be thorough and complete — use as much detail as the task requires. \
         Use light Markdown when it helps: short paragraphs, bullet lists, **bold**, `inline code` and fenced code blocks. Avoid tables and big headings: the chat window is small.
         """
@@ -315,6 +347,7 @@ final class ClaudeService {
             case .deepseek:  baseURL = "https://api.deepseek.com/v1"
             case .qwen:      baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
             case .moonshot:  baseURL = "https://api.moonshot.cn/v1"
+            case .openrouter: baseURL = "https://openrouter.ai/api/v1"
             case .anthropic, .ollama, .lmstudio: baseURL = ""
             }
         }
@@ -344,7 +377,7 @@ final class ClaudeService {
         }
 
         // Build messages
-        var msgs: [[String: Any]] = [["role": "system", "content": systemPrompt]]
+        var msgs: [[String: Any]] = [["role": "system", "content": offlineSystemPrompt]]
         for m in conversationMessages {
             var simplified = m
             if let content = m["content"] as? [[String: Any]],
@@ -383,6 +416,7 @@ final class ClaudeService {
         conversationMessages.append(["role": "user", "content": userText])
 
         let useStream = provider.isLocal || provider == .deepseek || provider == .qwen || provider == .moonshot
+            || provider == .openrouter
         var body: [String: Any] = [
             "model": state.activeChatModel,
             "max_tokens": 4096,

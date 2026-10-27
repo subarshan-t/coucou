@@ -7,12 +7,16 @@ import Security
 // its own build). Coucou looks at its own GitHub releases only once the user said yes, a few
 // times a day; nothing about the user goes with the request. The update is downloaded from
 // GitHub only, then checked before anything is replaced: the app in the zip must be Coucou
-// (bundle id and the announced version), signed with Louis's Developer ID, and accepted by
+// (bundle id and the announced version), signed with PG's Developer ID, and accepted by
 // Gatekeeper (notarized). Only then does it take the place of the running app, which restarts.
 
 @MainActor
 final class MacUpdater: ObservableObject {
     static let shared = MacUpdater()
+
+    /// Giraffy has no release feed of its own yet, and must never call the upstream
+    /// project's GitHub releases. Off until a Giraffy feed exists: no timer, no request, no UI.
+    static let isEnabled = false
 
     enum Phase: Equatable {
         case idle
@@ -87,6 +91,7 @@ final class MacUpdater: ObservableObject {
 
     /// At launch: a first look 30 s in, then every hour (a GitHub call only every 6 h).
     func start() {
+        guard Self.isEnabled else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in self?.tick(launch: true) }
         timer?.invalidate()
         let t = Timer(timeInterval: 3600, repeats: true) { _ in
@@ -140,7 +145,7 @@ final class MacUpdater: ObservableObject {
     // MARK: - Check
 
     func check(manual: Bool) async {
-        guard !busy, lastCheck != .checking else { return }
+        guard Self.isEnabled, !busy, lastCheck != .checking else { return }
         lastCheck = .checking
         var req = URLRequest(url: MacUpdate.releasesURL)
         req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")

@@ -107,7 +107,7 @@ private struct HubStatCard: View {
     }
 }
 
-/// Words per day, today in full orange.
+/// Words per day, today in the full accent colour.
 private struct HubBars: View {
     let days: [(date: Date, words: Int)]
 

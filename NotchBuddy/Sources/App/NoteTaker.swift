@@ -29,7 +29,7 @@ enum NoteSummaryEngine: String, CaseIterable, Identifiable {
 /// The Notetaker: records a call (your microphone, and what the Mac plays for the other people),
 /// shows a live transcript, then writes the whole transcript person by person with Parakeet and
 /// FluidAudio's diarizer, and a summary with the to-dos. Everything is stored in
-/// Application Support/NotchBuddy/Notes; the audio is deleted once the transcript is written.
+/// Application Support/Giraffy/Notes; the audio is deleted once the transcript is written.
 /// No bot joins the call: the other people should be told it is recorded.
 @MainActor
 final class NoteTaker: ObservableObject {
@@ -134,8 +134,8 @@ final class NoteTaker: ObservableObject {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             // One clock for both recordings, so the Mac's sound lines up with the microphone.
             let origin = DispatchTime.now().uptimeNanoseconds
-            let micChannel = try ChannelRecorder(url: dir.appendingPathComponent("mic.wav"), label: "fr.louisraille.NotchBuddy.notetaker.mic", origin: origin)
-            let systemChannel = try ChannelRecorder(url: dir.appendingPathComponent("system.wav"), label: "fr.louisraille.NotchBuddy.notetaker.sys", origin: origin)
+            let micChannel = try ChannelRecorder(url: dir.appendingPathComponent("mic.wav"), label: "au.com.purplegiraffe.Giraffy.notetaker.mic", origin: origin)
+            let systemChannel = try ChannelRecorder(url: dir.appendingPathComponent("system.wav"), label: "au.com.purplegiraffe.Giraffy.notetaker.sys", origin: origin)
             let mic = MicCapture()
             guard mic.start(sink: { micChannel.append($0) }) else {
                 startError = String(localized: "notes.error.mic")

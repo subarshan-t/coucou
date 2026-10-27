@@ -159,7 +159,7 @@ struct HubSnippetsPage: View {
                             .foregroundColor(HubTheme.secondary)
                         Text("« \(snippet.trigger) »")
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(Color(hex: "#FDBA74"))
+                            .foregroundColor(GiraffyTheme.accent)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 3)
                             .background(RoundedRectangle(cornerRadius: 6).fill(HubTheme.accent.opacity(0.14)))

@@ -38,7 +38,7 @@ struct VoiceListeningView: View {
                     if let question = pendingQuestionText {
                         Text(question)
                             .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "#F97316"))
+                            .foregroundColor(GiraffyTheme.accent)
                             .lineLimit(2)
                     } else if voice.commandTranscript.isEmpty {
                         Text("Say your command", tableName: "Localizable")
@@ -72,7 +72,7 @@ private struct MicDotView: View {
 
     var body: some View {
         Circle()
-            .fill(Color(hex: "#F97316"))
+            .fill(GiraffyTheme.accent)
             .frame(width: 8, height: 8)
             .scaleEffect((active && pulsing) ? 1.35 : 1.0)
             .opacity((active && pulsing) ? 0.65 : 1.0)

@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
   pull_request:
     branches: [main]
 
@@ -35,6 +35,12 @@ jobs:
 
       - name: Test approval queue
         run: bash scripts/test-approval-queue.sh
+
+      - name: Test approval audit log (redaction, retention, CSV, file)
+        run: bash scripts/test-approval-audit.sh
+
+      - name: Test agent usage (Claude Code and Codex session files, accounts)
+        run: bash scripts/test-agent-usage.sh
 
       - name: Test Flow dictation keys
         run: bash scripts/test-flow-keys.sh
@@ -131,6 +137,20 @@ jobs:
       - name: Pill colour tests
         run: bash scripts/test-pill-colors.sh
 
+      - name: Giraffy theme tests
+        run: bash scripts/test-giraffy-theme.sh
+
+      - name: Giraffy drawing tests (renders every pose)
+        run: GIRAFFY_RENDER_DIR="$RUNNER_TEMP/giraffy-renders" bash scripts/test-giraffy-drawing.sh
+
+      - name: Upload Giraffy renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: giraffy-renders
+          path: ${{ runner.temp }}/giraffy-renders
+          if-no-files-found: ignore
+
       - name: Claude settings file tests
         run: bash scripts/test-claude-settings.sh
 
@@ -160,42 +180,3 @@ jobs:
               grep -E "error:" build.log | sort -u | head -30 | sed 's/^/::error::/'
               exit 1
             }
-
-      - name: Build App Store target (unsigned)
-        run: |
-          xcodebuild \
-            -project NotchBuddy/NotchBuddy.xcodeproj \
-            -scheme CoucouAppStore \
-            -configuration Debug \
-            build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
-
-      - name: Build iPhone link spike (Mac, DebugCloud, unsigned)
-        run: |
-          xcodebuild \
-            -project NotchBuddy/NotchBuddy.xcodeproj \
-            -scheme NotchBuddyCloud \
-            -configuration DebugCloud \
-            build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
-
-      - name: Build iPhone link spike (Mac, ReleaseCloud, unsigned)
-        run: |
-          xcodebuild \
-            -project NotchBuddy/NotchBuddy.xcodeproj \
-            -scheme NotchBuddy \
-            -configuration ReleaseCloud \
-            build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
-
-      - name: Build iPhone app (unsigned)
-        run: |
-          xcodebuild \
-            -project NotchBuddy/NotchBuddy.xcodeproj \
-            -scheme CoucouPhone \
-            -destination 'generic/platform=iOS' \
-            build \
-            CODE_SIGNING_ALLOWED=NO
